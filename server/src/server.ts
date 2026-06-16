@@ -6,8 +6,11 @@ import { buildApp } from "./app.js";
 import { ensureDefaultUser } from "./defaultUser.js";
 
 async function main() {
-  // Apply schema to the (possibly empty) database on the volume.
-  execSync("prisma migrate deploy || prisma db push --skip-generate", { stdio: "inherit" });
+  // Apply the schema to the (possibly empty) database on the volume.
+  // This project has no migrations dir; `prisma db push` creates the tables
+  // on first boot and is a no-op ("already in sync") on later restarts.
+  // (`migrate deploy` would exit 0 with no migrations and never create tables.)
+  execSync("prisma db push --skip-generate", { stdio: "inherit" });
   await ensureDefaultUser();
 
   const app = buildApp();
