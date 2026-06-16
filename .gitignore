@@ -1,0 +1,14 @@
+
+# Brainstorming visual companion
+.superpowers/
+
+node_modules/
+dist/
+*.db
+*.db-journal
+web/dev-dist/
+playwright-report/
+test-results/
+
+*.tsbuildinfo
+.serena/

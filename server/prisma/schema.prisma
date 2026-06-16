@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  books     Book[]
+}
+
+model Book {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characters Character[]
+  relationships Relationship[]
+}
+
+model Character {
+  id         String   @id @default(cuid())
+  bookId     String
+  gender     String   // 'male' | 'female'
+  firstName  String
+  lastName   String
+  middleName String?
+  age        Int?
+  posX       Float?
+  posY       Float?
+  createdAt  DateTime @default(now())
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  outgoing   Relationship[] @relation("source")
+  incoming   Relationship[] @relation("target")
+}
+
+model Relationship {
+  id        String   @id @default(cuid())
+  bookId    String
+  sourceId  String
+  targetId  String
+  role      String
+  createdAt DateTime @default(now())
+  book      Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  source    Character @relation("source", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Character @relation("target", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, role])
+}

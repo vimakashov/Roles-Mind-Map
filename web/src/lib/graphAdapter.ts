@@ -1,0 +1,28 @@
+import type { BookGraph } from "../types.js";
+import { avatarKey } from "./avatar.js";
+
+export interface CyElement {
+  data: Record<string, unknown> & { id: string };
+  position?: { x: number; y: number };
+}
+
+export function toElements(graph: BookGraph): CyElement[] {
+  const nodes: CyElement[] = graph.nodes.map((c) => {
+    const el: CyElement = {
+      data: {
+        id: c.id,
+        label: `${c.firstName} ${c.lastName}`.trim(),
+        avatar: avatarKey(c.gender, c.age),
+        gender: c.gender,
+      },
+    };
+    if (c.posX != null && c.posY != null) el.position = { x: c.posX, y: c.posY };
+    return el;
+  });
+
+  const edges: CyElement[] = graph.edges.map((e) => ({
+    data: { id: e.id, source: e.sourceId, target: e.targetId, label: e.role },
+  }));
+
+  return [...nodes, ...edges];
+}
