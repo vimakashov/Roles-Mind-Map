@@ -89,3 +89,15 @@ test("saves node position", async () => {
   const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0]).toMatchObject({ posX: 12, posY: 34 });
 });
+
+test("returns 404 for non-existent ids on update and delete", async () => {
+  const nonExistentId = 999999;
+  const patch = await app.inject({
+    method: "PATCH", url: `/api/books/${nonExistentId}`,
+    payload: { title: "Ghost Book" },
+  });
+  expect(patch.statusCode).toBe(404);
+
+  const del = await app.inject({ method: "DELETE", url: `/api/characters/${nonExistentId}` });
+  expect(del.statusCode).toBe(404);
+});
