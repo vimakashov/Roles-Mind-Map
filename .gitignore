@@ -9,3 +9,5 @@ dist/
 web/dev-dist/
 playwright-report/
 test-results/
+
+*.tsbuildinfo
