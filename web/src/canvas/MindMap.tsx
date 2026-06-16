@@ -64,9 +64,27 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
     });
 
     return () => { cy.destroy(); cyRef.current = null; };
-    // Re-init when the set of node/edge ids changes.
+    // Re-init when the set of node/edge ids changes (add/remove).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph.nodes.map((n) => n.id).join(","), graph.edges.map((e) => e.id).join(",")]);
+
+  // Sync mutable display data (label, gender→colour, avatar, edge role) into
+  // the existing instance when an element is edited but the id set is unchanged.
+  // Without this, attribute-only edits (e.g. changing gender) would not appear
+  // until a full reload. Updating data in place keeps node positions/layout.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.batch(() => {
+      for (const el of toElements(graph)) {
+        const target = cy.getElementById(el.data.id);
+        if (target.empty()) continue;
+        // id is unchanged; source/target are immutable on existing edges.
+        const { id: _id, source: _source, target: _target, ...mutable } = el.data;
+        target.data(mutable);
+      }
+    });
+  }, [graph]);
 
   return <div ref={ref} style={{ position: "absolute", inset: 0 }} />;
 }
