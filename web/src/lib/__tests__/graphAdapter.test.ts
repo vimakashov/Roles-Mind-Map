@@ -29,3 +29,21 @@ test("maps edges with role label and source/target", () => {
   const edge = els.find((e) => e.data.id === "e1")!;
   expect(edge.data).toMatchObject({ source: "v", target: "p", label: "сын" });
 });
+
+test("node with posX set but posY null has no position field", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "x", bookId: "b", gender: "female", firstName: "А", lastName: "Б", posX: 5, posY: null }],
+    edges: [],
+  };
+  const els = toElements(g);
+  expect(els[0].position).toBeUndefined();
+});
+
+test("node with empty lastName produces a trimmed label (no trailing space)", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "y", bookId: "b", gender: "female", firstName: "Анна", lastName: "" }],
+    edges: [],
+  };
+  const els = toElements(g);
+  expect(els[0].data.label).toBe("Анна");
+});

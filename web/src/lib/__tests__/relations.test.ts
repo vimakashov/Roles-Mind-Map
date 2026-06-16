@@ -27,3 +27,15 @@ test("expandEntries flattens to (targetId, role) pairs", () => {
     { targetId: "z", role: "сын" },
   ]);
 });
+
+test("expandEntries round-trips multiple roles in order", () => {
+  const pairs = expandEntries([
+    { role: "сын", targetIds: ["p", "z"] },
+    { role: "муж", targetIds: ["e"] },
+  ]);
+  expect(pairs).toEqual([
+    { targetId: "p", role: "сын" },
+    { targetId: "z", role: "сын" },
+    { targetId: "e", role: "муж" },
+  ]);
+});

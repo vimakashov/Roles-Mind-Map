@@ -21,3 +21,16 @@ test("age must be 0..100 when provided, empty allowed", () => {
   expect(characterFormSchema.safeParse({ ...valid, age: "101" }).success).toBe(false);
   expect(characterFormSchema.safeParse({ ...valid, age: "-1" }).success).toBe(false);
 });
+
+test("invalid gender enum is rejected", () => {
+  expect(characterFormSchema.safeParse({ ...valid, gender: "other" }).success).toBe(false);
+});
+
+test("non-numeric age like '3a' is rejected", () => {
+  expect(characterFormSchema.safeParse({ ...valid, age: "3a" }).success).toBe(false);
+});
+
+test("boundary ages 0 and 100 are accepted", () => {
+  expect(characterFormSchema.safeParse({ ...valid, age: "0" }).success).toBe(true);
+  expect(characterFormSchema.safeParse({ ...valid, age: "100" }).success).toBe(true);
+});
