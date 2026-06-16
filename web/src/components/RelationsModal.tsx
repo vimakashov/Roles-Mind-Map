@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   Box, IconButton, MenuItem, Select, InputLabel, FormControl, OutlinedInput, Chip, Stack, Typography,
@@ -16,6 +16,8 @@ interface Props {
 
 export function RelationsModal({ open, others, value, onCancel, onSave }: Props) {
   const [entries, setEntries] = useState<RelationEntry[]>(value);
+
+  useEffect(() => { if (open) setEntries(value); }, [open]);
 
   const update = (i: number, patch: Partial<RelationEntry>) =>
     setEntries((e) => e.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));

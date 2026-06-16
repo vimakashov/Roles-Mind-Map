@@ -5,6 +5,7 @@ import {
 } from "@mui/material";
 import type { Character, Gender, RelationEntry } from "../types.js";
 import { characterFormSchema } from "../lib/validation.js";
+import { Avatar } from "./Avatar.js";
 import { RelationsModal } from "./RelationsModal.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import type { CharacterInput } from "../api/client.js";
@@ -60,6 +61,11 @@ export function CharacterModal({ open, mode, others, initial, onCancel, onSubmit
         <DialogTitle>{mode === "create" ? "Новый персонаж" : "Персонаж"}</DialogTitle>
         <DialogContent dividers sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            {gender && (
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <Avatar gender={gender as Gender} age={age === "" ? null : Number(age)} />
+              </Box>
+            )}
             <TextField select label="Пол" value={gender} error={!!errors.gender} helperText={errors.gender ?? "Обязательно"}
               onChange={(e) => setGender(e.target.value as Gender)}>
               <MenuItem value="male">Мужчина</MenuItem>
