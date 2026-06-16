@@ -1,0 +1,23 @@
+import { expect, test } from "vitest";
+import { characterFormSchema } from "../validation.js";
+
+const valid = { gender: "male", firstName: "Вася", lastName: "Петров", middleName: "", age: "30" };
+
+test("accepts a valid form", () => {
+  expect(characterFormSchema.safeParse(valid).success).toBe(true);
+});
+
+test("requires first and last name", () => {
+  expect(characterFormSchema.safeParse({ ...valid, firstName: "" }).success).toBe(false);
+  expect(characterFormSchema.safeParse({ ...valid, lastName: "" }).success).toBe(false);
+});
+
+test("caps names at 30 chars", () => {
+  expect(characterFormSchema.safeParse({ ...valid, firstName: "x".repeat(31) }).success).toBe(false);
+});
+
+test("age must be 0..100 when provided, empty allowed", () => {
+  expect(characterFormSchema.safeParse({ ...valid, age: "" }).success).toBe(true);
+  expect(characterFormSchema.safeParse({ ...valid, age: "101" }).success).toBe(false);
+  expect(characterFormSchema.safeParse({ ...valid, age: "-1" }).success).toBe(false);
+});
