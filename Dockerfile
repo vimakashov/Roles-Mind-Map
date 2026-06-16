@@ -24,8 +24,11 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 ENV DATABASE_URL="file:/data/app.db"
 ENV PORT=3000
+# npm workspaces hoist all deps to the root node_modules; there is no
+# server/node_modules. Put the hoisted .bin on PATH so the `prisma` CLI
+# invoked by server.ts at startup is resolvable under `node dist/server.js`.
+ENV PATH="/app/node_modules/.bin:${PATH}"
 COPY --from=server /app/node_modules /app/node_modules
-COPY --from=server /app/server/node_modules ./node_modules
 COPY --from=server /app/server/dist ./dist
 COPY --from=server /app/server/prisma ./prisma
 COPY --from=server /app/server/package.json ./package.json
