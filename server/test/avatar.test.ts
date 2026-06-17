@@ -95,3 +95,23 @@ test("DELETE is a no-op 204 when there is no avatar", async () => {
   const del = await app.inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
   expect(del.statusCode).toBe(204);
 });
+
+test("deleting a character deletes its avatar row", async () => {
+  const c = await makeCharacter();
+  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await app.inject({ method: "DELETE", url: `/api/characters/${c.id}` });
+  const { prisma } = await import("../src/db.js");
+  expect(await prisma.characterAvatar.count()).toBe(0);
+});
+
+test("deleting a book deletes its characters' avatars", async () => {
+  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "B2" } })).json();
+  const c = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "female", firstName: "C", lastName: "D", relations: [] },
+  })).json();
+  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await app.inject({ method: "DELETE", url: `/api/books/${book.id}` });
+  const { prisma } = await import("../src/db.js");
+  expect(await prisma.characterAvatar.count()).toBe(0);
+});
