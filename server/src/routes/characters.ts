@@ -62,6 +62,11 @@ export async function characterRoutes(app: FastifyInstance) {
       .send(avatar.data);
   });
 
+  app.delete<{ Params: { id: string } }>("/api/characters/:id/avatar", async (req, reply) => {
+    await prisma.characterAvatar.deleteMany({ where: { characterId: req.params.id } });
+    return reply.code(204).send();
+  });
+
   app.delete<{ Params: { id: string } }>("/api/characters/:id", async (req, reply) => {
     await prisma.character.delete({ where: { id: req.params.id } });
     return reply.code(204).send();

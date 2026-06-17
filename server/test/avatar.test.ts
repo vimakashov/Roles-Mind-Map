@@ -80,3 +80,18 @@ test("GET returns 404 when the character has no avatar", async () => {
   const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
   expect(res.statusCode).toBe(404);
 });
+
+test("DELETE removes the avatar and a subsequent GET is 404", async () => {
+  const c = await makeCharacter();
+  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const del = await app.inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
+  expect(del.statusCode).toBe(204);
+  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  expect(res.statusCode).toBe(404);
+});
+
+test("DELETE is a no-op 204 when there is no avatar", async () => {
+  const c = await makeCharacter();
+  const del = await app.inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
+  expect(del.statusCode).toBe(204);
+});
