@@ -53,6 +53,15 @@ export async function characterRoutes(app: FastifyInstance) {
     return reply.code(200).send({ ok: true });
   });
 
+  app.get<{ Params: { id: string } }>("/api/characters/:id/avatar", async (req, reply) => {
+    const avatar = await prisma.characterAvatar.findUnique({ where: { characterId: req.params.id } });
+    if (!avatar) return reply.code(404).send({ error: "not found" });
+    return reply
+      .header("Cache-Control", "public, max-age=31536000, immutable")
+      .type(avatar.mimeType)
+      .send(avatar.data);
+  });
+
   app.delete<{ Params: { id: string } }>("/api/characters/:id", async (req, reply) => {
     await prisma.character.delete({ where: { id: req.params.id } });
     return reply.code(204).send();

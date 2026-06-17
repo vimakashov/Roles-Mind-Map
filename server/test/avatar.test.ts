@@ -65,3 +65,18 @@ test("PUT twice replaces the stored avatar (upsert)", async () => {
   const res = await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
   expect(res.statusCode).toBe(200);
 });
+
+test("GET returns the stored bytes with the right content-type", async () => {
+  const c = await makeCharacter();
+  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  expect(res.statusCode).toBe(200);
+  expect(res.headers["content-type"]).toContain("image/webp");
+  expect(Buffer.from(res.rawPayload).equals(Buffer.from([1, 2, 3, 4]))).toBe(true);
+});
+
+test("GET returns 404 when the character has no avatar", async () => {
+  const c = await makeCharacter();
+  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  expect(res.statusCode).toBe(404);
+});
