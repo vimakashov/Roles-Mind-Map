@@ -7,6 +7,11 @@ import { GENDER_COLORS, EDGE_COLOR } from "../theme.js";
 
 cytoscape.use(cola);
 
+// Spacing applies to auto-layout only; saved posX/posY are not scaled.
+const SPACING_FACTOR = 3;
+const BASE_EDGE_LENGTH = 50;
+const BASE_NODE_SPACING = 10;
+
 interface Props {
   graph: BookGraph;
   onNodeTap: (id: string) => void;
@@ -27,11 +32,20 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
           selector: "node",
           style: {
             "background-color": (ele: any) => GENDER_COLORS[ele.data("gender") as "male" | "female"],
+            "background-image": "data(avatarUri)",
+            "background-fit": "cover",
+            "border-width": 2,
+            "border-color": "#ffffff",
             label: "data(label)",
+            "text-wrap": "wrap",
             "text-valign": "bottom",
             "text-margin-y": 6,
             "font-size": 11,
             color: "#54413f",
+            "text-background-color": "#ffffff",
+            "text-background-opacity": 1,
+            "text-background-padding": "2px",
+            "text-background-shape": "roundrectangle",
             width: 46,
             height: 46,
           },
@@ -53,7 +67,14 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
           },
         },
       ],
-      layout: { name: "cola", animate: true, infinite: true, fit: false } as any,
+      layout: {
+        name: "cola",
+        animate: true,
+        infinite: true,
+        fit: false,
+        edgeLength: BASE_EDGE_LENGTH * SPACING_FACTOR,
+        nodeSpacing: BASE_NODE_SPACING * SPACING_FACTOR,
+      } as any,
     });
     cyRef.current = cy;
 

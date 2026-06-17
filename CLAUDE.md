@@ -8,7 +8,7 @@ Roles-Mind-Map — a simple mind map for book characters (per `README.md`). Apac
 
 ## Status
 
-Implementation is complete (Phases 0–5 committed).
+Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, PWA).
 
 ### Commands
 
@@ -47,6 +47,14 @@ npm-workspaces monorepo with two packages:
 **Schema** (normalized SQLite): `User`, `Book`, `Character`, `Relationship`. A directed relationship edge means "source is [role] of target" (e.g. "Frodo is friend of Sam").
 
 Data persists in the `rmm-data` Docker volume.
+
+### Gotchas (learned the hard way — keep in mind)
+
+- **API client & bodyless requests** — `web/src/api/client.ts` only sets `Content-Type: application/json` when a body is present. Fastify rejects an empty body that declares that content-type (`FST_ERR_CTP_EMPTY_JSON_BODY` → 400), which silently breaks `DELETE`s. Don't reintroduce a blanket content-type header.
+- **Mind-map canvas updates** — `web/src/canvas/MindMap.tsx` re-initialises Cytoscape only when the *set* of node/edge ids changes (add/remove). Attribute-only edits (gender, name, age, role) are synced into the existing instance in place by a second effect. Both paths are needed; editing an existing node without the sync effect would not show until reload.
+- **Server schema on boot** — there are no Prisma migrations; `server/src/server.ts` runs `prisma db push` at startup (idempotent). `prisma migrate deploy` is wrong here — it exits 0 without creating tables.
+- **Docker** — npm workspaces hoist all deps to the **root** `node_modules` (there is no `server/node_modules`); the runtime image copies root `node_modules` and puts `/app/node_modules/.bin` on `PATH` so the `prisma` CLI is found under `node dist/server.js`. The server build needs `@types/node` (build is `tsc`, which dev/`tsx` and Vitest skip — so type errors in `server.ts` only surface in the Docker build).
+- **Server tests** — `server/vitest.config.ts` sets `DATABASE_URL=file:./test.db` so the Prisma client and the schema-push agree on a throwaway DB. Without it, tests run against `dev.db` and fail on a fresh clone.
 
 ## Tooling rules
 
