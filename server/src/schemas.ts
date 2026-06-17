@@ -30,3 +30,16 @@ export const positionSchema = z.object({
 export type RelationEntry = z.infer<typeof relationEntrySchema>;
 export type CharacterCreate = z.infer<typeof characterCreateSchema>;
 export type CharacterUpdate = z.infer<typeof characterUpdateSchema>;
+
+export const AVATAR_MIME = "image/webp";
+export const AVATAR_MAX_DIM = 1024;
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+
+export const avatarUploadSchema = z.object({
+  data: z.string().min(1),
+  mimeType: z.literal(AVATAR_MIME),
+  width: z.number().int().positive().max(AVATAR_MAX_DIM),
+  height: z.number().int().positive().max(AVATAR_MAX_DIM),
+});
+
+export type AvatarUpload = z.infer<typeof avatarUploadSchema>;
