@@ -34,7 +34,7 @@ export async function characterRoutes(app: FastifyInstance) {
     return prisma.character.update({ where: { id: req.params.id }, data: parsed.data });
   });
 
-  app.put<{ Params: { id: string } }>("/api/characters/:id/avatar", { bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
+  app.put<{ Params: { id: string } }>("/api/characters/:id/avatar", { bodyLimit: 4 * 1024 * 1024 /* base64 of a ~2 MB image is ~2.7 MB; 4 MB body limit gives headroom over the global 1 MB default */ }, async (req, reply) => {
     const parsed = avatarUploadSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const buf = Buffer.from(parsed.data.data, "base64");
@@ -43,6 +43,7 @@ export async function characterRoutes(app: FastifyInstance) {
     const character = await prisma.character.findUnique({ where: { id: req.params.id } });
     if (!character) return reply.code(404).send({ error: "not found" });
 
+    // mimeType is client-declared; the image is validated and baked client-side before upload
     const { width, height, mimeType } = parsed.data;
     await prisma.characterAvatar.upsert({
       where: { characterId: req.params.id },
