@@ -17,6 +17,7 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 const AVATAR_SIZE = 512;
 
 async function blobToBase64(blob: Blob): Promise<string> {
+  // blob.arrayBuffer() is unavailable in jsdom (test env); FileReader is the portable workaround.
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -24,7 +25,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
       // dataUrl is "data:<mime>;base64,<b64>" — strip the prefix
       resolve(dataUrl.split(",")[1]);
     };
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => reject(reader.error ?? new Error("FileReader failed"));
     reader.readAsDataURL(blob);
   });
 }
@@ -64,6 +65,7 @@ export const api = {
     req<void>(`/api/characters/${id}`, { method: "DELETE" }),
   avatarUrl: (id: string, version: string) =>
     `/api/characters/${id}/avatar?v=${encodeURIComponent(version)}`,
+  // Callers pass a baked 512x512 WebP blob; the server enforces image/webp (z.literal) and the 512 dims.
   setAvatar: async (id: string, blob: Blob) => {
     const data = await blobToBase64(blob);
     return req<{ ok: true }>(`/api/characters/${id}/avatar`, {

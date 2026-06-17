@@ -55,8 +55,7 @@ test("setAvatar PUTs a JSON body with base64 data and webp mime", async () => {
   expect(headersOf([url, init])["Content-Type"]).toBe("application/json");
   const body = JSON.parse(init.body as string);
   expect(body.mimeType).toBe("image/webp");
-  expect(typeof body.data).toBe("string");
-  expect(body.data.length).toBeGreaterThan(0);
+  expect(body.data).toBe("AQIDBA==");
   expect(body.width).toBe(512);
   expect(body.height).toBe(512);
 });
