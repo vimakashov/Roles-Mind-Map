@@ -115,3 +115,28 @@ test("deleting a book deletes its characters' avatars", async () => {
   const { prisma } = await import("../src/db.js");
   expect(await prisma.characterAvatar.count()).toBe(0);
 });
+
+test("graph node carries avatarUpdatedAt and no avatar bytes", async () => {
+  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "G" } })).json();
+  const c = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "E", lastName: "F", relations: [] },
+  })).json();
+  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const node = graph.nodes.find((n: { id: string }) => n.id === c.id);
+  expect(node.avatarUpdatedAt).toBeTruthy();
+  expect(node).not.toHaveProperty("avatar");
+  expect(JSON.stringify(graph)).not.toContain("AQIDBA=="); // the base64 bytes never leak
+});
+
+test("graph node avatarUpdatedAt is null when there is no avatar", async () => {
+  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "G2" } })).json();
+  await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "N", lastName: "O", relations: [] },
+  });
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.nodes[0].avatarUpdatedAt).toBeNull();
+});
