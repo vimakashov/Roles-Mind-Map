@@ -34,7 +34,7 @@ export async function characterRoutes(app: FastifyInstance) {
     return prisma.character.update({ where: { id: req.params.id }, data: parsed.data });
   });
 
-  app.put<{ Params: { id: string } }>("/api/characters/:id/avatar", { config: { rawBody: false }, bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
+  app.put<{ Params: { id: string } }>("/api/characters/:id/avatar", { bodyLimit: 4 * 1024 * 1024 }, async (req, reply) => {
     const parsed = avatarUploadSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const buf = Buffer.from(parsed.data.data, "base64");
