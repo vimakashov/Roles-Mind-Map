@@ -6,6 +6,7 @@ import type { BookGraph, Character } from "../types.js";
 import { TopBar } from "../components/TopBar.js";
 import { AddFab } from "../components/AddFab.js";
 import { CharacterModal } from "../components/CharacterModal.js";
+import { ConfirmDialog } from "../components/ConfirmDialog.js";
 import { MindMap } from "../canvas/MindMap.js";
 import { groupEdges } from "../lib/relations.js";
 
@@ -15,6 +16,7 @@ export function BookScreen() {
   const [graph, setGraph] = useState<BookGraph>({ nodes: [], edges: [] });
   const [loaded, setLoaded] = useState(false);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; character?: Character } | null>(null);
+  const [deleteBookOpen, setDeleteBookOpen] = useState(false);
 
   const refresh = () => api.getGraph(bookId!).then((g) => { setGraph(g); setLoaded(true); });
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [bookId]);
@@ -49,11 +51,16 @@ export function BookScreen() {
     await refresh();
   };
 
+  const removeBook = async () => {
+    await api.deleteBook(bookId!);
+    navigate("/");
+  };
+
   const empty = loaded && graph.nodes.length === 0;
 
   return (
     <Box sx={{ minHeight: "100dvh", position: "relative" }}>
-      <TopBar onBack={() => navigate("/")} />
+      <TopBar onBack={() => navigate("/")} onDelete={() => setDeleteBookOpen(true)} />
       {empty ? (
         <Box sx={{ minHeight: "70dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
           <Typography variant="h5">Персонажей пока нет</Typography>
@@ -87,6 +94,14 @@ export function BookScreen() {
           onDelete={modal.mode === "edit" ? remove : undefined}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteBookOpen}
+        title="Удалить книгу?"
+        message="Книга будет удалена со всеми персонажами и связями. Это действие необратимо."
+        onCancel={() => setDeleteBookOpen(false)}
+        onConfirm={() => { setDeleteBookOpen(false); void removeBook(); }}
+      />
     </Box>
   );
 }
