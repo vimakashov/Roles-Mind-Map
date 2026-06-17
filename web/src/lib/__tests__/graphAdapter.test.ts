@@ -13,8 +13,9 @@ const graph: BookGraph = {
 test("maps nodes with label, avatar key and saved position", () => {
   const els = toElements(graph);
   const vNode = els.find((e) => e.data.id === "v")!;
-  expect(vNode.data.label).toBe("Вася В");
+  expect(vNode.data.label).toBe("Вася\nВ");
   expect(vNode.data.avatar).toBe("male-adult");
+  expect(vNode.data.avatarUri as string).toContain("data:image/svg+xml,");
   expect(vNode.position).toEqual({ x: 10, y: 20 });
 });
 

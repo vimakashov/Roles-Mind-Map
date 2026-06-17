@@ -1,5 +1,6 @@
 import type { BookGraph } from "../types.js";
 import { avatarKey } from "./avatar.js";
+import { avatarSvgMarkup } from "./avatarSvg.js";
 
 export interface CyElement {
   data: Record<string, unknown> & { id: string };
@@ -11,8 +12,9 @@ export function toElements(graph: BookGraph): CyElement[] {
     const el: CyElement = {
       data: {
         id: c.id,
-        label: `${c.firstName} ${c.lastName}`.trim(),
+        label: [c.firstName, c.lastName].filter(Boolean).join("\n"),
         avatar: avatarKey(c.gender, c.age),
+        avatarUri: "data:image/svg+xml," + encodeURIComponent(avatarSvgMarkup(c.gender, c.age)),
         gender: c.gender,
       },
     };
