@@ -18,6 +18,7 @@ export function setupTestDb() {
 
 /** Delete all rows between tests, preserving the default user. */
 export async function resetData() {
+  await prisma.characterAvatar.deleteMany();
   await prisma.relationship.deleteMany();
   await prisma.character.deleteMany();
   await prisma.book.deleteMany();
