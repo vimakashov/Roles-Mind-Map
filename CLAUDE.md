@@ -8,7 +8,7 @@ Roles-Mind-Map — a simple mind map for book characters (per `README.md`). Apac
 
 ## Status
 
-Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, PWA).
+Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, PWA).
 
 ### Commands
 
@@ -44,17 +44,23 @@ npm-workspaces monorepo with two packages:
 
 **Single Docker image** (multi-stage): builds both packages, runs the Fastify server which serves the web bundle.
 
-**Schema** (normalized SQLite): `User`, `Book`, `Character`, `Relationship`. A directed relationship edge means "source is [role] of target" (e.g. "Frodo is friend of Sam").
+**Schema** (normalized SQLite): `User`, `Book`, `Character`, `Relationship`, `CharacterAvatar`. A directed relationship edge means "source is [role] of target" (e.g. "Frodo is friend of Sam"). `CharacterAvatar` is a 1:1 with `Character` (shared PK `characterId`, `onDelete: Cascade`) holding the avatar bytes (`data Bytes`, `mimeType`, `width`, `height`, `updatedAt`) in a separate table so the graph query never loads blobs.
 
 Data persists in the `rmm-data` Docker volume.
 
-**Character avatars** — `web/src/lib/avatarSvg.ts` exposes `avatarSvgMarkup(gender, age)`, the single source of truth for the schematic silhouette (gender colour + age-based head radius). It is consumed two ways from the same call: the React `Avatar` component renders it via `dangerouslySetInnerHTML`, and `graphAdapter.ts` emits it as a `data:image/svg+xml,` URI (`avatarUri`) used as the Cytoscape node `background-image`. Don't re-inline the SVG geometry anywhere else.
+**Character avatars** — each character shows either a *custom uploaded image* or a *schematic silhouette*.
+
+- **Schematic (default)** — `web/src/lib/avatarSvg.ts` exposes `avatarSvgMarkup(gender, age)`, the single source of truth for the silhouette (gender colour + age-based head radius). It is consumed two ways from the same call: the React `Avatar` component renders it via `dangerouslySetInnerHTML`, and `graphAdapter.ts` emits it as a `data:image/svg+xml,` URI (`avatarUri`) used as the Cytoscape node `background-image`. Don't re-inline the SVG geometry anywhere else.
+- **Custom (uploaded)** — no server-side image processing (pure-JS server preserved). The browser validates the file (`web/src/lib/avatarImage.ts`: type/size, then pixel dims via `loadImage`), the user circular-crops it (`AvatarCropDialog` + `react-easy-crop`), and `bakeToWebp` renders the crop to a **512×512 WebP** blob. Only that small blob is uploaded as base64 JSON via `api.setAvatar` to `PUT /api/characters/:id/avatar` (validated by `avatarUploadSchema`; mime literal `image/webp`, max dim, 2 MB decoded byte cap). Bytes are served from `GET /api/characters/:id/avatar` (used as both `<img src>` and the Cytoscape `background-image`) and removed via `DELETE`. The graph payload exposes only `avatarUpdatedAt` (never bytes); when set, `Avatar`/`graphAdapter.ts` build the GET URL with a `?v=<avatarUpdatedAt>` cache-bust (`api.avatarUrl`) instead of the schematic data URI. `CharacterModal` stages the change (`AvatarChange` = none/set/remove) locally and `BookScreen.submit` reconciles it after the character save (cancel discards the staging).
 
 ### Gotchas (learned the hard way — keep in mind)
 
 - **API client & bodyless requests** — `web/src/api/client.ts` only sets `Content-Type: application/json` when a body is present. Fastify rejects an empty body that declares that content-type (`FST_ERR_CTP_EMPTY_JSON_BODY` → 400), which silently breaks `DELETE`s. Don't reintroduce a blanket content-type header.
 - **Mind-map canvas updates** — `web/src/canvas/MindMap.tsx` re-initialises Cytoscape only when the *set* of node/edge ids changes (add/remove). Attribute-only edits (gender, name, age, role) are synced into the existing instance in place by a second effect that spreads all mutable `data` fields (so `label`, `avatar`, `avatarUri` propagate too). Both paths are needed; editing an existing node without the sync effect would not show until reload.
-- **Canvas avatar URI encoding** — the avatar SVG contains `#` hex colours, so `graphAdapter.ts` wraps it with `encodeURIComponent` before the `data:image/svg+xml,` prefix. An unencoded `#` truncates the URI (Cytoscape reads it as a fragment) and the avatar silently vanishes — keep the encoding.
+- **Canvas avatar URI encoding** — for the *schematic* branch, the avatar SVG contains `#` hex colours, so `graphAdapter.ts` wraps it with `encodeURIComponent` before the `data:image/svg+xml,` prefix. An unencoded `#` truncates the URI (Cytoscape reads it as a fragment) and the avatar silently vanishes — keep the encoding. (Custom avatars use the `GET` endpoint URL instead, so this only applies when `avatarUpdatedAt` is null.)
+- **Avatar cache-busting** — `GET /api/characters/:id/avatar` returns `Cache-Control: public, max-age=31536000, immutable`. That's safe *only because* the client always requests it with `?v=<avatarUpdatedAt>` (`api.avatarUrl`), and `CharacterAvatar.updatedAt` is `@updatedAt` so every upsert advances it; `BookScreen` re-fetches the graph after a save to pick up the new timestamp. Drop the `?v=` and an updated avatar will show stale forever.
+- **Avatar upload body limit** — the `PUT` avatar route overrides Fastify's global 1 MB `bodyLimit` to 4 MB, because a ~2 MB image base64-encodes to ~2.7 MB of JSON. The real ceiling is the 2 MB *decoded* byte cap checked in the handler. Don't lower the route `bodyLimit` below the base64-expanded size of the byte cap.
+- **`tsc` vs Vitest on whole-file edits** — Vitest runs via esbuild and silently ignores duplicate imports/declarations; `tsc` (the Docker/`npm run build` step) does not. When replacing a whole component file, verify there's exactly one import/interface block — a leftover duplicate passes tests but breaks the build with TS2300. Run `npx tsc --noEmit -p web/tsconfig.json` after large web edits.
 - **Canvas layout spacing** — `MindMap.tsx` passes explicit `edgeLength`/`nodeSpacing` (base × `SPACING_FACTOR = 3`) to the cola layout. This affects *auto-layout only*; saved `posX`/`posY` are never scaled, so hand-placed maps keep their positions.
 - **Server schema on boot** — there are no Prisma migrations; `server/src/server.ts` runs `prisma db push` at startup (idempotent). `prisma migrate deploy` is wrong here — it exits 0 without creating tables.
 - **Docker** — npm workspaces hoist all deps to the **root** `node_modules` (there is no `server/node_modules`); the runtime image copies root `node_modules` and puts `/app/node_modules/.bin` on `PATH` so the `prisma` CLI is found under `node dist/server.js`. The server build needs `@types/node` (build is `tsc`, which dev/`tsx` and Vitest skip — so type errors in `server.ts` only surface in the Docker build).
