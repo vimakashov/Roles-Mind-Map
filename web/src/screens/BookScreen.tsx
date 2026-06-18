@@ -39,8 +39,12 @@ export function BookScreen() {
     const saved = modal?.mode === "edit" && modal.character
       ? await api.updateCharacter(modal.character.id, input)
       : await api.createCharacter(bookId!, input);
-    if (avatar.kind === "set") await api.setAvatar(saved.id, avatar.blob);
-    else if (avatar.kind === "remove") await api.deleteAvatar(saved.id);
+    try {
+      if (avatar.kind === "set") await api.setAvatar(saved.id, avatar.blob);
+      else if (avatar.kind === "remove") await api.deleteAvatar(saved.id);
+    } catch (e) {
+      console.error("avatar update failed", e);
+    }
     setModal(null);
     await refresh();
   };
