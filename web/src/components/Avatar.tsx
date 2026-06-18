@@ -6,16 +6,6 @@ interface Props {
   gender: Gender;
   age?: number | null;
   size?: number;
-}
-
-import type { Gender } from "../types.js";
-import { avatarKey } from "../lib/avatar.js";
-import { avatarSvgMarkup } from "../lib/avatarSvg.js";
-
-interface Props {
-  gender: Gender;
-  age?: number | null;
-  size?: number;
   src?: string | null;
 }
 
