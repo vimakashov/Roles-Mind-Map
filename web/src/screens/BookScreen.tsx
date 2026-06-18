@@ -5,7 +5,7 @@ import { api, type CharacterInput } from "../api/client.js";
 import type { BookGraph, Character } from "../types.js";
 import { TopBar } from "../components/TopBar.js";
 import { AddFab } from "../components/AddFab.js";
-import { CharacterModal } from "../components/CharacterModal.js";
+import { CharacterModal, type AvatarChange } from "../components/CharacterModal.js";
 import { ConfirmDialog } from "../components/ConfirmDialog.js";
 import { MindMap } from "../canvas/MindMap.js";
 import { groupEdges } from "../lib/relations.js";
@@ -35,12 +35,12 @@ export function BookScreen() {
     relations: groupEdges(modal.character.id, graph.edges),
   };
 
-  const submit = async (input: CharacterInput) => {
-    if (modal?.mode === "edit" && modal.character) {
-      await api.updateCharacter(modal.character.id, input);
-    } else {
-      await api.createCharacter(bookId!, input);
-    }
+  const submit = async (input: CharacterInput, avatar: AvatarChange) => {
+    const saved = modal?.mode === "edit" && modal.character
+      ? await api.updateCharacter(modal.character.id, input)
+      : await api.createCharacter(bookId!, input);
+    if (avatar.kind === "set") await api.setAvatar(saved.id, avatar.blob);
+    else if (avatar.kind === "remove") await api.deleteAvatar(saved.id);
     setModal(null);
     await refresh();
   };
@@ -88,6 +88,8 @@ export function BookScreen() {
           open
           mode={modal.mode}
           others={others}
+          characterId={modal.character?.id}
+          avatarUpdatedAt={modal.character?.avatarUpdatedAt}
           initial={initial}
           onCancel={() => setModal(null)}
           onSubmit={submit}
