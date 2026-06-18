@@ -26,6 +26,9 @@ vi.mock("../../api/client.js", () => ({
     deleteCharacter: vi.fn(),
     deleteBook: vi.fn(),
     savePosition: vi.fn(),
+    setAvatar: vi.fn(),
+    deleteAvatar: vi.fn(),
+    avatarUrl: (id: string, v: string) => `/api/characters/${id}/avatar?v=${v}`,
   },
 }));
 
@@ -88,4 +91,25 @@ test("deletes the book from the top bar and navigates home", async () => {
 
   await waitFor(() => expect(api.deleteBook).toHaveBeenCalledWith("b1"));
   expect(await screen.findByText(/Список книг/)).toBeInTheDocument();
+});
+
+test("removing the avatar in the edit modal calls deleteAvatar with the character id", async () => {
+  (api.getGraph as any).mockResolvedValue({
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "Вася", lastName: "Петров", age: 30, avatarUpdatedAt: "2026-06-18T00:00:00.000Z" }],
+    edges: [],
+  });
+  (api.updateCharacter as any).mockResolvedValue({ id: "c1" });
+  (api.deleteAvatar as any).mockResolvedValue(undefined);
+
+  renderBookScreen();
+  await userEvent.click(await screen.findByRole("button", { name: "tap-c1" }));
+
+  // Open the avatar menu and choose "Удалить" (the avatar removal, not the character).
+  await userEvent.click(await screen.findByTestId("avatar-button"));
+  await userEvent.click(await screen.findByRole("menuitem", { name: /удалить/i }));
+
+  // Save the modal.
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+
+  await waitFor(() => expect(api.deleteAvatar).toHaveBeenCalledWith("c1"));
 });

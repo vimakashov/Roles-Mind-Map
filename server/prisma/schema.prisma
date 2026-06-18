@@ -39,6 +39,7 @@ model Character {
   book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
   outgoing   Relationship[] @relation("source")
   incoming   Relationship[] @relation("target")
+  avatar     CharacterAvatar?
 }
 
 model Relationship {
@@ -53,4 +54,14 @@ model Relationship {
   target    Character @relation("target", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@unique([sourceId, targetId, role])
+}
+
+model CharacterAvatar {
+  characterId String    @id
+  data        Bytes
+  mimeType    String
+  width       Int
+  height      Int
+  updatedAt   DateTime  @updatedAt
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }

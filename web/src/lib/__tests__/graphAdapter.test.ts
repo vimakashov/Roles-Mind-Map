@@ -48,3 +48,21 @@ test("node with empty lastName produces a trimmed label (no trailing space)", ()
   const els = toElements(g);
   expect(els[0].data.label).toBe("Анна");
 });
+
+test("node with avatarUpdatedAt points avatarUri at the avatar endpoint", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b", gender: "male", firstName: "Я", lastName: "Я", avatarUpdatedAt: "2026-06-18T00:00:00.000Z" }],
+    edges: [],
+  };
+  const node = toElements(g)[0];
+  expect(node.data.avatarUri).toBe("/api/characters/c1/avatar?v=2026-06-18T00%3A00%3A00.000Z");
+});
+
+test("node without avatarUpdatedAt keeps the schematic data URI", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b", gender: "male", firstName: "Я", lastName: "Я", avatarUpdatedAt: null }],
+    edges: [],
+  };
+  const node = toElements(g)[0];
+  expect(node.data.avatarUri as string).toContain("data:image/svg+xml,");
+});
