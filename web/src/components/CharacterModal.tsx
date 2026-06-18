@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   MenuItem, Stack, Box, IconButton, Menu,
@@ -60,6 +60,7 @@ export function CharacterModal({
     () => (avatar.kind === "set" ? URL.createObjectURL(avatar.blob) : null),
     [avatar],
   );
+  useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl); }, [blobUrl]);
   const avatarSrc =
     avatar.kind === "set" ? blobUrl
     : avatar.kind === "remove" ? null
@@ -81,6 +82,11 @@ export function CharacterModal({
         setCropFile(file);
       })
       .catch(() => setAvatarError("Не удалось загрузить изображение."));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMenuAnchor(null);
+    pickFile(e.currentTarget);
   };
 
   const submit = () => {
@@ -159,7 +165,7 @@ export function CharacterModal({
               <MenuItem key="change" component="label">
                 Изменить
                 <input hidden type="file" accept={ACCEPT_ATTR}
-                  onChange={(e) => { setMenuAnchor(null); pickFile(e.currentTarget); }} />
+                  onChange={handleFileChange} />
               </MenuItem>,
               <MenuItem key="remove" onClick={() => { setAvatar({ kind: "remove" }); setMenuAnchor(null); }}>
                 Удалить
@@ -169,7 +175,7 @@ export function CharacterModal({
             <MenuItem key="add" component="label">
               Добавить
               <input hidden type="file" accept={ACCEPT_ATTR}
-                onChange={(e) => { setMenuAnchor(null); pickFile(e.currentTarget); }} />
+                onChange={handleFileChange} />
             </MenuItem>
           )}
       </Menu>
