@@ -26,7 +26,7 @@ export function toElements(graph: BookGraph): CyElement[] {
   });
 
   const edges: CyElement[] = graph.edges.map((e) => ({
-    data: { id: e.id, source: e.sourceId, target: e.targetId, label: e.role },
+    data: { id: e.id, source: e.sourceId, target: e.targetId, label: e.role, color: e.color ?? null },
   }));
 
   return [...nodes, ...edges];

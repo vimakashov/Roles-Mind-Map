@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, expect, test } from "vitest";
 import { setupTestDb, resetData, prisma } from "./helpers.js";
 import { reconcileRelationships } from "../src/services/relationships.js";
+import { relationEntrySchema } from "../src/schemas.js";
 import { DEFAULT_USER_ID } from "../src/defaultUser.js";
 
 beforeAll(() => setupTestDb());
@@ -24,7 +25,7 @@ test("expands one entry with multiple targets into multiple rows", async () => {
   const { book, vasya, petya, zhanna } = await seed();
   await prisma.$transaction((tx) =>
     reconcileRelationships(tx, book.id, vasya.id, [
-      { role: "сын", targetIds: [petya.id, zhanna.id] },
+      { role: "сын", targets: [{ id: petya.id, color: null }, { id: zhanna.id, color: null }] },
     ]),
   );
   const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
@@ -36,12 +37,12 @@ test("adds and removes rows to match desired set", async () => {
   const { book, vasya, petya, zhanna } = await seed();
   await prisma.$transaction((tx) =>
     reconcileRelationships(tx, book.id, vasya.id, [
-      { role: "сын", targetIds: [petya.id] },
+      { role: "сын", targets: [{ id: petya.id, color: null }] },
     ]),
   );
   await prisma.$transaction((tx) =>
     reconcileRelationships(tx, book.id, vasya.id, [
-      { role: "сын", targetIds: [zhanna.id] },
+      { role: "сын", targets: [{ id: zhanna.id, color: null }] },
     ]),
   );
   const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
@@ -53,7 +54,7 @@ test("drops self-relations", async () => {
   const { book, vasya } = await seed();
   await prisma.$transaction((tx) =>
     reconcileRelationships(tx, book.id, vasya.id, [
-      { role: "self", targetIds: [vasya.id] },
+      { role: "self", targets: [{ id: vasya.id, color: null }] },
     ]),
   );
   const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
@@ -64,10 +65,65 @@ test("dedupes identical (target, role) pairs across entries", async () => {
   const { book, vasya, petya } = await seed();
   await prisma.$transaction((tx) =>
     reconcileRelationships(tx, book.id, vasya.id, [
-      { role: "сын", targetIds: [petya.id] },
-      { role: "сын", targetIds: [petya.id] },
+      { role: "сын", targets: [{ id: petya.id, color: null }] },
+      { role: "сын", targets: [{ id: petya.id, color: null }] },
     ]),
   );
   const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
   expect(rows).toHaveLength(1);
+});
+
+test("persists colour on create", async () => {
+  const { book, vasya, petya } = await seed();
+  await prisma.$transaction((tx) =>
+    reconcileRelationships(tx, book.id, vasya.id, [
+      { role: "друг", targets: [{ id: petya.id, color: "#ff0000" }] },
+    ]),
+  );
+  const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
+  expect(rows[0].color).toBe("#ff0000");
+});
+
+test("stores null colour as default (no colour written)", async () => {
+  const { book, vasya, petya } = await seed();
+  await prisma.$transaction((tx) =>
+    reconcileRelationships(tx, book.id, vasya.id, [
+      { role: "друг", targets: [{ id: petya.id, color: null }] },
+    ]),
+  );
+  const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
+  expect(rows[0].color).toBeNull();
+});
+
+test("updates colour when only the colour changes", async () => {
+  const { book, vasya, petya } = await seed();
+  await prisma.$transaction((tx) =>
+    reconcileRelationships(tx, book.id, vasya.id, [
+      { role: "друг", targets: [{ id: petya.id, color: "#111111" }] },
+    ]),
+  );
+  await prisma.$transaction((tx) =>
+    reconcileRelationships(tx, book.id, vasya.id, [
+      { role: "друг", targets: [{ id: petya.id, color: "#222222" }] },
+    ]),
+  );
+  const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
+  expect(rows).toHaveLength(1);
+  expect(rows[0].color).toBe("#222222");
+});
+
+test("rejects an invalid hex colour", () => {
+  const result = relationEntrySchema.safeParse({
+    role: "друг",
+    targets: [{ id: "x", color: "red" }],
+  });
+  expect(result.success).toBe(false);
+});
+
+test("accepts a null colour", () => {
+  const result = relationEntrySchema.safeParse({
+    role: "друг",
+    targets: [{ id: "x", color: null }],
+  });
+  expect(result.success).toBe(true);
 });

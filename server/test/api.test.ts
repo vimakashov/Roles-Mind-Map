@@ -36,7 +36,7 @@ test("creates character with relations and returns graph", async () => {
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V",
-      relations: [{ role: "сын", targetIds: [petya.id] }],
+      relations: [{ role: "сын", targets: [{ id: petya.id, color: null }] }],
     },
   });
   expect(vasyaRes.statusCode).toBe(201);
@@ -55,12 +55,12 @@ test("updates character relations via reconciliation", async () => {
   const a = await t("A"); const b = await t("B");
   const v = (await app.inject({
     method: "POST", url: "/api/characters",
-    payload: { bookId: book.id, gender: "male", firstName: "V", lastName: "X", relations: [{ role: "друг", targetIds: [a.id] }] },
+    payload: { bookId: book.id, gender: "male", firstName: "V", lastName: "X", relations: [{ role: "друг", targets: [{ id: a.id, color: null }] }] },
   })).json();
 
   await app.inject({
     method: "PATCH", url: `/api/characters/${v.id}`,
-    payload: { gender: "male", firstName: "V", lastName: "X", relations: [{ role: "друг", targetIds: [b.id] }] },
+    payload: { gender: "male", firstName: "V", lastName: "X", relations: [{ role: "друг", targets: [{ id: b.id, color: null }] }] },
   });
 
   const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
@@ -71,7 +71,7 @@ test("updates character relations via reconciliation", async () => {
 test("deletes character and cascades its edges", async () => {
   const book = await createBook();
   const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  const b = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "female", firstName: "B", lastName: "X", relations: [{ role: "жена", targetIds: [a.id] }] } })).json();
+  const b = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "female", firstName: "B", lastName: "X", relations: [{ role: "жена", targets: [{ id: a.id, color: null }] }] } })).json();
 
   const del = await app.inject({ method: "DELETE", url: `/api/characters/${a.id}` });
   expect(del.statusCode).toBe(204);

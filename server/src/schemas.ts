@@ -5,9 +5,16 @@ const name30 = z.string().trim().min(1).max(30);
 export const bookCreateSchema = z.object({ title: name30 });
 export const bookUpdateSchema = z.object({ title: name30 });
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
 export const relationEntrySchema = z.object({
   role: name30,
-  targetIds: z.array(z.string().min(1)),
+  targets: z.array(
+    z.object({
+      id: z.string().min(1),
+      color: hexColor.nullable(),
+    }),
+  ),
 });
 
 export const characterCreateSchema = z.object({

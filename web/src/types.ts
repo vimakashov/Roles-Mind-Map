@@ -25,6 +25,7 @@ export interface Relationship {
   sourceId: string;
   targetId: string;
   role: string;
+  color?: string | null;
 }
 
 export interface BookGraph {
@@ -32,8 +33,14 @@ export interface BookGraph {
   edges: Relationship[];
 }
 
+/** A relation target and the colour of its line (null = default). */
+export interface RelationTarget {
+  id: string;
+  color: string | null;
+}
+
 /** UI-level grouping: one role with its selected targets. */
 export interface RelationEntry {
   role: string;
-  targetIds: string[];
+  targets: RelationTarget[];
 }

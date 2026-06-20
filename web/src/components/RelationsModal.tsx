@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  Box, IconButton, MenuItem, Select, InputLabel, FormControl, OutlinedInput, Chip, Stack, Typography,
+  Box, IconButton, MenuItem, Select, InputLabel, FormControl, OutlinedInput,
+  Chip, Stack, Typography, Popper, Paper, ClickAwayListener,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { Wheel, ShadeSlider, hexToHsva, hsvaToHex } from "@uiw/react-color";
 import type { Character, RelationEntry } from "../types.js";
+import { EDGE_COLOR } from "../theme.js";
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
 
 interface Props {
   open: boolean;
@@ -14,8 +19,12 @@ interface Props {
   onSave: (entries: RelationEntry[]) => void;
 }
 
+interface Picker { entryIndex: number; targetId: string; anchor: HTMLElement }
+
 export function RelationsModal({ open, others, value, onCancel, onSave }: Props) {
   const [entries, setEntries] = useState<RelationEntry[]>(value);
+  const [picker, setPicker] = useState<Picker | null>(null);
+  const [draft, setDraft] = useState(EDGE_COLOR);
 
   useEffect(() => { if (open) setEntries(value); }, [open]);
 
@@ -25,6 +34,35 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
   const nameOf = (id: string) => {
     const c = others.find((o) => o.id === id);
     return c ? `${c.firstName} ${c.lastName}` : id;
+  };
+
+  const setColor = (entryIndex: number, targetId: string, color: string) =>
+    setEntries((es) =>
+      es.map((e, i) =>
+        i === entryIndex
+          ? { ...e, targets: e.targets.map((t) => (t.id === targetId ? { ...t, color } : t)) }
+          : e,
+      ),
+    );
+
+  const openPicker = (entryIndex: number, targetId: string, anchor: HTMLElement) => {
+    const cur = entries[entryIndex].targets.find((t) => t.id === targetId)?.color ?? EDGE_COLOR;
+    setDraft(cur);
+    setPicker({ entryIndex, targetId, anchor });
+  };
+
+  const validDraft = HEX.test(draft) ? draft : EDGE_COLOR;
+
+  const applyHsva = (patch: { h?: number; s?: number; v?: number }) => {
+    if (!picker) return;
+    const next = hsvaToHex({ ...hexToHsva(validDraft), ...patch });
+    setDraft(next);
+    setColor(picker.entryIndex, picker.targetId, next);
+  };
+
+  const onHexInput = (v: string) => {
+    setDraft(v);
+    if (HEX.test(v) && picker) setColor(picker.entryIndex, picker.targetId, v);
   };
 
   return (
@@ -57,15 +95,18 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
                 <Select
                   labelId={`tgt-${i}`}
                   multiple
-                  value={entry.targetIds}
+                  value={entry.targets.map((t) => t.id)}
                   input={<OutlinedInput label="Связь" />}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const ids = typeof e.target.value === "string"
+                      ? e.target.value.split(",")
+                      : e.target.value;
                     update(i, {
-                      targetIds: typeof e.target.value === "string"
-                        ? e.target.value.split(",")
-                        : e.target.value,
-                    })
-                  }
+                      targets: ids.map(
+                        (id) => entry.targets.find((t) => t.id === id) ?? { id, color: null },
+                      ),
+                    });
+                  }}
                   renderValue={(ids) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                       {ids.map((id) => <Chip key={id} label={nameOf(id)} size="small" />)}
@@ -77,10 +118,35 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
                   ))}
                 </Select>
               </FormControl>
+              {entry.targets.length > 0 && (
+                <Stack spacing={1} sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary">Цвета линий</Typography>
+                  {entry.targets.map((t) => (
+                    <Stack
+                      key={t.id}
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      justifyContent="space-between"
+                    >
+                      <Typography variant="body2">{nameOf(t.id)}</Typography>
+                      <IconButton
+                        aria-label={`цвет линии для ${nameOf(t.id)}`}
+                        onClick={(ev) => openPicker(i, t.id, ev.currentTarget)}
+                      >
+                        <Box sx={{
+                          width: 22, height: 22, borderRadius: "50%",
+                          bgcolor: t.color ?? EDGE_COLOR, border: "1px solid #ccc",
+                        }} />
+                      </IconButton>
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
             </Box>
           ))}
         </Stack>
-        <Button sx={{ mt: 2 }} onClick={() => setEntries((e) => [...e, { role: "", targetIds: [] }])}>
+        <Button sx={{ mt: 2 }} onClick={() => setEntries((e) => [...e, { role: "", targets: [] }])}>
           + Добавить связь
         </Button>
       </DialogContent>
@@ -88,6 +154,29 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
         <Button onClick={onCancel}>Отмена</Button>
         <Button variant="contained" onClick={() => onSave(entries)}>Сохранить</Button>
       </DialogActions>
+
+      <Popper open={!!picker} anchorEl={picker?.anchor ?? null} placement="bottom" sx={{ zIndex: 1400 }}>
+        <ClickAwayListener onClickAway={() => setPicker(null)}>
+          <Paper sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+            <Wheel
+              color={hexToHsva(validDraft)}
+              onChange={(c) => applyHsva({ h: c.hsva.h, s: c.hsva.s })}
+            />
+            <ShadeSlider
+              hsva={hexToHsva(validDraft)}
+              style={{ width: 210 }}
+              onChange={(s) => applyHsva(s)}
+            />
+            <TextField
+              label="HEX"
+              size="small"
+              value={draft}
+              onChange={(e) => onHexInput(e.target.value)}
+              sx={{ width: 210 }}
+            />
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
     </Dialog>
   );
 }
