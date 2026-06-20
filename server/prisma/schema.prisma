@@ -48,6 +48,7 @@ model Relationship {
   sourceId  String
   targetId  String
   role      String
+  color     String?  // hex "#rrggbb"; null => render with default EDGE_COLOR
   createdAt DateTime @default(now())
   book      Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
   source    Character @relation("source", fields: [sourceId], references: [id], onDelete: Cascade)
