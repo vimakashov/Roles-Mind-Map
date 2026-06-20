@@ -4,13 +4,9 @@ import cola from "cytoscape-cola";
 import type { BookGraph } from "../types.js";
 import { toElements } from "../lib/graphAdapter.js";
 import { GENDER_COLORS, EDGE_COLOR } from "../theme.js";
+import { SPACING_FACTOR, BASE_EDGE_LENGTH, BASE_NODE_SPACING, POSITION_SCALE } from "../lib/layout.js";
 
 cytoscape.use(cola);
-
-// Spacing applies to auto-layout only; saved posX/posY are not scaled.
-const SPACING_FACTOR = 3;
-const BASE_EDGE_LENGTH = 50;
-const BASE_NODE_SPACING = 10;
 
 interface Props {
   graph: BookGraph;
@@ -81,7 +77,8 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
     cy.on("tap", "node", (evt) => onNodeTap(evt.target.id()));
     cy.on("dragfree", "node", (evt) => {
       const p = evt.target.position();
-      onNodeMoved(evt.target.id(), p.x, p.y);
+      // Persist in logical space (graphAdapter scales by POSITION_SCALE on load).
+      onNodeMoved(evt.target.id(), p.x / POSITION_SCALE, p.y / POSITION_SCALE);
     });
 
     return () => { cy.destroy(); cyRef.current = null; };

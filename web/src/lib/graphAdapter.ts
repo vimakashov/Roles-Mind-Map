@@ -2,6 +2,7 @@ import type { BookGraph } from "../types.js";
 import { api } from "../api/client.js";
 import { avatarKey } from "./avatar.js";
 import { avatarSvgMarkup } from "./avatarSvg.js";
+import { POSITION_SCALE } from "./layout.js";
 
 export interface CyElement {
   data: Record<string, unknown> & { id: string };
@@ -21,7 +22,8 @@ export function toElements(graph: BookGraph): CyElement[] {
         gender: c.gender,
       },
     };
-    if (c.posX != null && c.posY != null) el.position = { x: c.posX, y: c.posY };
+    if (c.posX != null && c.posY != null)
+      el.position = { x: c.posX * POSITION_SCALE, y: c.posY * POSITION_SCALE };
     return el;
   });
 
