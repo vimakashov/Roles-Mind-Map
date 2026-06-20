@@ -25,10 +25,19 @@ test("nodes without saved position have no position field", () => {
   expect(pNode.position).toBeUndefined();
 });
 
-test("maps edges with role label and source/target", () => {
+test("maps edges with role label, source/target, and null colour by default", () => {
   const els = toElements(graph);
   const edge = els.find((e) => e.data.id === "e1")!;
-  expect(edge.data).toMatchObject({ source: "v", target: "p", label: "сын" });
+  expect(edge.data).toMatchObject({ source: "v", target: "p", label: "сын", color: null });
+});
+
+test("passes an explicit edge colour through to the element data", () => {
+  const g: BookGraph = {
+    nodes: graph.nodes,
+    edges: [{ id: "e2", bookId: "b", sourceId: "v", targetId: "p", role: "друг", color: "#abcdef" }],
+  };
+  const edge = toElements(g).find((e) => e.data.id === "e2")!;
+  expect(edge.data.color).toBe("#abcdef");
 });
 
 test("node with posX set but posY null has no position field", () => {
