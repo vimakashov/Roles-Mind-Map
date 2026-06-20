@@ -44,7 +44,7 @@ npm-workspaces monorepo with two packages:
 
 **Single Docker image** (multi-stage): builds both packages, runs the Fastify server which serves the web bundle.
 
-**Schema** (normalized SQLite): `User`, `Book`, `Character`, `Relationship`, `CharacterAvatar`. A directed relationship edge means "source is [role] of target" (e.g. "Frodo is friend of Sam"). `CharacterAvatar` is a 1:1 with `Character` (shared PK `characterId`, `onDelete: Cascade`) holding the avatar bytes (`data Bytes`, `mimeType`, `width`, `height`, `updatedAt`) in a separate table so the graph query never loads blobs.
+**Schema** (normalized SQLite): `User`, `Book`, `Character`, `Relationship`, `CharacterAvatar`. A directed relationship edge means "source is [role] of target" (e.g. "Frodo is friend of Sam") and carries an optional `color` (hex `#rrggbb`, nullable) for its canvas line; `null` renders with the default `EDGE_COLOR`. `CharacterAvatar` is a 1:1 with `Character` (shared PK `characterId`, `onDelete: Cascade`) holding the avatar bytes (`data Bytes`, `mimeType`, `width`, `height`, `updatedAt`) in a separate table so the graph query never loads blobs.
 
 Data persists in the `rmm-data` Docker volume.
 
@@ -65,6 +65,7 @@ Data persists in the `rmm-data` Docker volume.
 - **Server schema on boot** — there are no Prisma migrations; `server/src/server.ts` runs `prisma db push` at startup (idempotent). `prisma migrate deploy` is wrong here — it exits 0 without creating tables.
 - **Docker** — npm workspaces hoist all deps to the **root** `node_modules` (there is no `server/node_modules`); the runtime image copies root `node_modules` and puts `/app/node_modules/.bin` on `PATH` so the `prisma` CLI is found under `node dist/server.js`. The server build needs `@types/node` (build is `tsc`, which dev/`tsx` and Vitest skip — so type errors in `server.ts` only surface in the Docker build).
 - **Server tests** — `server/vitest.config.ts` sets `DATABASE_URL=file:./test.db` so the Prisma client and the schema-push agree on a throwaway DB. Without it, tests run against `dev.db` and fail on a fresh clone.
+- **Relationship colour & reconcile** — `Relationship.color` is nullable (`null` = default `EDGE_COLOR`, never written to the DB). `reconcileRelationships` keys edges by `(targetId, role)`; colour is an *attribute*, so the reconcile has a dedicated **update** branch for colour-only changes — a create/delete-only reconcile would silently drop them. The relations modal carries colour per target (`RelationEntry.targets: {id, color}[]`) and the canvas `line-color`/`target-arrow-color` fall back to `EDGE_COLOR` when an edge's `color` is null.
 
 ## Tooling rules
 
