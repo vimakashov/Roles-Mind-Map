@@ -18,6 +18,15 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
 
+  // The cytoscape instance is only re-created when the node/edge id set changes,
+  // so the tap/dragfree handlers bound at init would otherwise capture stale
+  // callbacks (e.g. an onNodeTap closing over an outdated graph after an
+  // attribute-only edit). Route them through refs that always hold the latest.
+  const onNodeTapRef = useRef(onNodeTap);
+  const onNodeMovedRef = useRef(onNodeMoved);
+  onNodeTapRef.current = onNodeTap;
+  onNodeMovedRef.current = onNodeMoved;
+
   useEffect(() => {
     if (!ref.current) return;
     const cy = cytoscape({
@@ -74,11 +83,11 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
     });
     cyRef.current = cy;
 
-    cy.on("tap", "node", (evt) => onNodeTap(evt.target.id()));
+    cy.on("tap", "node", (evt) => onNodeTapRef.current(evt.target.id()));
     cy.on("dragfree", "node", (evt) => {
       const p = evt.target.position();
       // Persist in logical space (graphAdapter scales by POSITION_SCALE on load).
-      onNodeMoved(evt.target.id(), p.x / POSITION_SCALE, p.y / POSITION_SCALE);
+      onNodeMovedRef.current(evt.target.id(), p.x / POSITION_SCALE, p.y / POSITION_SCALE);
     });
 
     return () => { cy.destroy(); cyRef.current = null; };
