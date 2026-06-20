@@ -8,7 +8,7 @@ Roles-Mind-Map — a simple mind map for book characters (per `README.md`). Apac
 
 ## Status
 
-Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, PWA).
+Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, per-edge relationship line colours, PWA).
 
 ### Commands
 
@@ -66,6 +66,8 @@ Data persists in the `rmm-data` Docker volume.
 - **Docker** — npm workspaces hoist all deps to the **root** `node_modules` (there is no `server/node_modules`); the runtime image copies root `node_modules` and puts `/app/node_modules/.bin` on `PATH` so the `prisma` CLI is found under `node dist/server.js`. The server build needs `@types/node` (build is `tsc`, which dev/`tsx` and Vitest skip — so type errors in `server.ts` only surface in the Docker build).
 - **Server tests** — `server/vitest.config.ts` sets `DATABASE_URL=file:./test.db` so the Prisma client and the schema-push agree on a throwaway DB. Without it, tests run against `dev.db` and fail on a fresh clone.
 - **Relationship colour & reconcile** — `Relationship.color` is nullable (`null` = default `EDGE_COLOR`, never written to the DB). `reconcileRelationships` keys edges by `(targetId, role)`; colour is an *attribute*, so the reconcile has a dedicated **update** branch for colour-only changes — a create/delete-only reconcile would silently drop them. The relations modal carries colour per target (`RelationEntry.targets: {id, color}[]`) and the canvas `line-color`/`target-arrow-color` fall back to `EDGE_COLOR` when an edge's `color` is null.
+- **Relations wire shape is tested in two places** — the `relations` payload (`{ role, targets: {id, color}[] }`, validated by `relationEntrySchema`) is exercised by both `server/test/relationships.test.ts` (the service directly) **and** `server/test/api.test.ts` (end-to-end through the character create/update routes). When you change the shape, update *both* — a focused `relationships` test run goes green while `api.test.ts` posts the old shape and 400s. Run the **full** `npm run test --workspace server` before declaring a schema/validation change done, not just the focused file.
+- **Relations modal picker is a `Popper`, not a `Popover`** — `RelationsModal.tsx` uses MUI `Popper` (non-modal) for the `@uiw/react-color` wheel, anchored to the swatch. A MUI `Popover` (nested modal) marks the parent `Dialog` `aria-hidden`, which makes the "Сохранить" button unreachable to `getByRole` while the picker is open. Keep it a `Popper` + `ClickAwayListener`.
 
 ## Tooling rules
 
