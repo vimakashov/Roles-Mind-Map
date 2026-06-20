@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { toElements } from "../graphAdapter.js";
+import { POSITION_SCALE } from "../layout.js";
 import type { BookGraph } from "../../types.js";
 
 const graph: BookGraph = {
@@ -16,7 +17,7 @@ test("maps nodes with label, avatar key and saved position", () => {
   expect(vNode.data.label).toBe("Вася\nВ");
   expect(vNode.data.avatar).toBe("male-adult");
   expect(vNode.data.avatarUri as string).toContain("data:image/svg+xml,");
-  expect(vNode.position).toEqual({ x: 10, y: 20 });
+  expect(vNode.position).toEqual({ x: 10 * POSITION_SCALE, y: 20 * POSITION_SCALE });
 });
 
 test("nodes without saved position have no position field", () => {
