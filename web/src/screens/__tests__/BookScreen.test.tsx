@@ -25,6 +25,7 @@ vi.mock("../../api/client.js", () => ({
     updateCharacter: vi.fn(),
     deleteCharacter: vi.fn(),
     deleteBook: vi.fn(),
+    updateBook: vi.fn(),
     savePosition: vi.fn(),
     setAvatar: vi.fn(),
     deleteAvatar: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock("../../api/client.js", () => ({
 beforeEach(() => vi.clearAllMocks());
 
 const oneCharacter: BookGraph = {
+  title: "Война и мир",
   nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "Вася", lastName: "Петров", age: 30 }],
   edges: [],
 };
@@ -112,4 +114,20 @@ test("removing the avatar in the edit modal calls deleteAvatar with the characte
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
 
   await waitFor(() => expect(api.deleteAvatar).toHaveBeenCalledWith("c1"));
+});
+
+test("renames the book from the top bar pencil", async () => {
+  (api.getGraph as any).mockResolvedValue(oneCharacter);
+  (api.updateBook as any).mockResolvedValue({ id: "b1", title: "Анна Каренина", sortOrder: 0 });
+
+  renderBookScreen();
+
+  await userEvent.click(await screen.findByRole("button", { name: /переименовать книгу/i }));
+  const field = await screen.findByLabelText(/название/i);
+  expect(field).toHaveValue("Война и мир");
+  await userEvent.clear(field);
+  await userEvent.type(field, "Анна Каренина");
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+
+  await waitFor(() => expect(api.updateBook).toHaveBeenCalledWith("b1", "Анна Каренина"));
 });

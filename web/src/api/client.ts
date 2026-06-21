@@ -45,6 +45,8 @@ export const api = {
     req<Book>("/api/books", { method: "POST", body: JSON.stringify({ title }) }),
   deleteBook: (id: string) =>
     req<void>(`/api/books/${id}`, { method: "DELETE" }),
+  updateBook: (id: string, title: string) =>
+    req<Book>(`/api/books/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
   getGraph: (bookId: string) => req<BookGraph>(`/api/books/${bookId}/graph`),
   createCharacter: (bookId: string, input: CharacterInput) =>
     req<Character>("/api/characters", {
