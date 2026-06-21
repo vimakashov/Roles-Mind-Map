@@ -8,7 +8,7 @@ export const bookUpdateSchema = z.object({ title: name30 });
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 export const relationEntrySchema = z.object({
-  role: name30,
+  role: z.string().trim().max(30).optional().default(""),
   targets: z.array(
     z.object({
       id: z.string().min(1),

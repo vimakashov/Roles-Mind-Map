@@ -127,3 +127,19 @@ test("accepts a null colour", () => {
   });
   expect(result.success).toBe(true);
 });
+
+test("relationEntrySchema accepts an empty role", () => {
+  expect(relationEntrySchema.safeParse({ role: "", targets: [] }).success).toBe(true);
+});
+
+test("reconcile stores an empty role as a blank-labelled edge", async () => {
+  const { book, vasya, petya } = await seed();
+  await prisma.$transaction((tx) =>
+    reconcileRelationships(tx, book.id, vasya.id, [
+      { role: "", targets: [{ id: petya.id, color: null }] },
+    ]),
+  );
+  const rows = await prisma.relationship.findMany({ where: { sourceId: vasya.id } });
+  expect(rows).toHaveLength(1);
+  expect(rows[0].role).toBe("");
+});
