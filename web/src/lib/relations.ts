@@ -1,21 +1,15 @@
-import type { Relationship, RelationEntry, RelationTarget } from "../types.js";
+import type { Relationship, RelationConnection } from "../types.js";
 
-/** Group a single source character's outgoing edges into role-keyed entries (insertion order). */
-export function groupEdges(sourceId: string, edges: Relationship[]): RelationEntry[] {
-  const byRole = new Map<string, RelationTarget[]>();
+/**
+ * All undirected connections incident to `characterId` (either endpoint).
+ * `otherId` is the opposite node, so connections created "from the other side"
+ * are visible too. Edges arrive sorted by createdAt -> stable order.
+ */
+export function incidentConnections(characterId: string, edges: Relationship[]): RelationConnection[] {
+  const out: RelationConnection[] = [];
   for (const e of edges) {
-    if (e.sourceId !== sourceId) continue;
-    const list = byRole.get(e.role) ?? [];
-    list.push({ id: e.targetId, color: e.color ?? null });
-    byRole.set(e.role, list);
+    if (e.sourceId === characterId) out.push({ otherId: e.targetId, role: e.role, color: e.color ?? null });
+    else if (e.targetId === characterId) out.push({ otherId: e.sourceId, role: e.role, color: e.color ?? null });
   }
-  return [...byRole.entries()].map(([role, targets]) => ({ role, targets }));
-}
-
-export function expandEntries(
-  entries: RelationEntry[],
-): { targetId: string; role: string; color: string | null }[] {
-  return entries.flatMap((entry) =>
-    entry.targets.map((t) => ({ targetId: t.id, role: entry.role, color: t.color })),
-  );
+  return out;
 }

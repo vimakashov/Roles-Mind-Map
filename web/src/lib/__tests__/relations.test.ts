@@ -1,49 +1,30 @@
 import { expect, test } from "vitest";
-import { groupEdges, expandEntries } from "../relations.js";
+import { incidentConnections } from "../relations.js";
 import type { Relationship } from "../../types.js";
 
 const edge = (
-  sourceId: string, targetId: string, role: string, color: string | null = null,
-): Relationship => ({
-  id: `${sourceId}-${targetId}-${role}`, bookId: "b", sourceId, targetId, role, color,
+  id: string, sourceId: string, targetId: string, role: string, color: string | null = null,
+): Relationship => ({ id, bookId: "b", sourceId, targetId, role, color });
+
+test("collects a connection where the character is the source", () => {
+  const edges = [edge("e1", "v", "p", "друзья", "#ff0000")];
+  expect(incidentConnections("v", edges)).toEqual([{ otherId: "p", role: "друзья", color: "#ff0000" }]);
 });
 
-test("groups a source's edges by role, carrying each target's colour", () => {
-  const edges = [
-    edge("v", "p", "сын", "#ff0000"),
-    edge("v", "z", "сын"),
-    edge("v", "e", "муж"),
-  ];
-  const entries = groupEdges("v", edges);
-  expect(entries).toEqual([
-    { role: "сын", targets: [{ id: "p", color: "#ff0000" }, { id: "z", color: null }] },
-    { role: "муж", targets: [{ id: "e", color: null }] },
-  ]);
+test("collects a connection where the character is the target (other side)", () => {
+  const edges = [edge("e1", "p", "v", "семья")];
+  expect(incidentConnections("v", edges)).toEqual([{ otherId: "p", role: "семья", color: null }]);
 });
 
-test("ignores edges where the character is the target", () => {
-  const edges = [edge("x", "v", "друг")];
-  expect(groupEdges("v", edges)).toEqual([]);
-});
-
-test("expandEntries flattens to (targetId, role, color) triples", () => {
-  const pairs = expandEntries([
-    { role: "сын", targets: [{ id: "p", color: "#00ff00" }, { id: "z", color: null }] },
-  ]);
-  expect(pairs).toEqual([
-    { targetId: "p", role: "сын", color: "#00ff00" },
-    { targetId: "z", role: "сын", color: null },
+test("collects connections from both sides, preserving edge order", () => {
+  const edges = [edge("e1", "v", "p", "друзья"), edge("e2", "z", "v", "семья")];
+  expect(incidentConnections("v", edges)).toEqual([
+    { otherId: "p", role: "друзья", color: null },
+    { otherId: "z", role: "семья", color: null },
   ]);
 });
 
-test("expandEntries round-trips multiple roles in order", () => {
-  const pairs = expandEntries([
-    { role: "сын", targets: [{ id: "p", color: null }, { id: "z", color: null }] },
-    { role: "муж", targets: [{ id: "e", color: null }] },
-  ]);
-  expect(pairs).toEqual([
-    { targetId: "p", role: "сын", color: null },
-    { targetId: "z", role: "сын", color: null },
-    { targetId: "e", role: "муж", color: null },
-  ]);
+test("ignores edges that don't touch the character", () => {
+  const edges = [edge("e1", "p", "z", "друзья")];
+  expect(incidentConnections("v", edges)).toEqual([]);
 });

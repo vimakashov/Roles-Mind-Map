@@ -5,8 +5,8 @@ import { RelationsModal } from "../RelationsModal.js";
 import type { Character } from "../../types.js";
 import { __resetBackStack } from "../../lib/backStack.js";
 
-// The wheel/shade widgets are third-party canvas-ish components; mock them so the
-// test exercises our modal state via the HEX input deterministically.
+// Wheel/shade are third-party canvas-ish widgets; mock them so the modal state is
+// exercised via the HEX input deterministically.
 vi.mock("@uiw/react-color", () => ({
   Wheel: () => null,
   ShadeSlider: () => null,
@@ -19,52 +19,66 @@ const others: Character[] = [
   { id: "z", bookId: "b", gender: "female", firstName: "Жанна", lastName: "Ж" },
 ];
 
-test("adds an entry and returns it on save", async () => {
+test("adds a connection via the menu and returns it on save", async () => {
   const onSave = vi.fn();
-  render(
-    <RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />,
-  );
+  render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />);
   await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
-  await userEvent.type(screen.getByLabelText(/роль/i), "сын");
+  await userEvent.click(screen.getByRole("menuitem", { name: /жанна/i }));
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
-  expect(onSave).toHaveBeenCalledWith([{ role: "сын", targets: [] }]);
+  expect(onSave).toHaveBeenCalledWith([{ otherId: "z", role: "", color: null }]);
 });
 
-test("picks a colour for a target via the hex input", async () => {
+test("hides already-connected characters from the add menu", async () => {
+  render(
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "", color: null }]}
+      onCancel={() => {}} onSave={() => {}} />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  expect(screen.queryByRole("menuitem", { name: /петя/i })).not.toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: /жанна/i })).toBeInTheDocument();
+});
+
+test("edits the role of a connection", async () => {
   const onSave = vi.fn();
   render(
-    <RelationsModal
-      open
-      others={others}
-      value={[{ role: "друг", targets: [{ id: "p", color: null }] }]}
-      onCancel={() => {}}
-      onSave={onSave}
-    />,
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "", color: null }]}
+      onCancel={() => {}} onSave={onSave} />,
+  );
+  await userEvent.type(screen.getByLabelText(/роль/i), "друзья");
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+  expect(onSave).toHaveBeenCalledWith([{ otherId: "p", role: "друзья", color: null }]);
+});
+
+test("picks a colour for a connection via the hex input", async () => {
+  const onSave = vi.fn();
+  render(
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "друзья", color: null }]}
+      onCancel={() => {}} onSave={onSave} />,
   );
   await userEvent.click(screen.getByRole("button", { name: /цвет линии для Петя П/i }));
   const hex = screen.getByLabelText(/hex/i);
   await userEvent.clear(hex);
   await userEvent.type(hex, "#112233");
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
-  expect(onSave).toHaveBeenCalledWith([
-    { role: "друг", targets: [{ id: "p", color: "#112233" }] },
-  ]);
+  expect(onSave).toHaveBeenCalledWith([{ otherId: "p", role: "друзья", color: "#112233" }]);
 });
 
-test("saves an entry with an empty role", async () => {
+test("removes a connection", async () => {
   const onSave = vi.fn();
   render(
-    <RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />,
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "друзья", color: null }]}
+      onCancel={() => {}} onSave={onSave} />,
   );
-  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
-  // Leave the role blank, just save.
+  await userEvent.click(screen.getByRole("button", { name: /удалить связь с Петя П/i }));
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
-  expect(onSave).toHaveBeenCalledWith([{ role: "", targets: [] }]);
+  expect(onSave).toHaveBeenCalledWith([]);
 });
 
-test("the role field is marked optional", async () => {
-  render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={() => {}} />);
-  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+test("the role field is marked optional", () => {
+  render(
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "", color: null }]}
+      onCancel={() => {}} onSave={() => {}} />,
+  );
   expect(screen.getByText(/необязательно/i)).toBeInTheDocument();
 });
 
@@ -73,9 +87,7 @@ test("Back button cancels the relations modal", async () => {
   vi.spyOn(window.history, "pushState").mockImplementation(() => {});
   vi.spyOn(window.history, "go").mockImplementation(() => {});
   const onCancel = vi.fn();
-  render(
-    <RelationsModal open others={others} value={[]} onCancel={onCancel} onSave={() => {}} />,
-  );
+  render(<RelationsModal open others={others} value={[]} onCancel={onCancel} onSave={() => {}} />);
   await new Promise<void>((r) => queueMicrotask(() => r()));
   window.dispatchEvent(new PopStateEvent("popstate"));
   expect(onCancel).toHaveBeenCalledTimes(1);

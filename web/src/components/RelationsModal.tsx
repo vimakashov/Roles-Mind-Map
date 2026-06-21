@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { useBackClose } from "../lib/useBackClose.js";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  Box, IconButton, MenuItem, Select, InputLabel, FormControl, OutlinedInput,
-  Chip, Stack, Typography, Popper, Paper, ClickAwayListener,
+  Box, IconButton, MenuItem, Menu, Stack, Typography, Popper, Paper, ClickAwayListener,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Wheel, ShadeSlider, hexToHsva, hsvaToHex } from "@uiw/react-color";
-import type { Character, RelationEntry } from "../types.js";
+import type { Character, RelationConnection } from "../types.js";
 import { EDGE_COLOR } from "../theme.js";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -15,58 +14,58 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 interface Props {
   open: boolean;
   others: Character[];
-  value: RelationEntry[];
+  value: RelationConnection[];
   onCancel: () => void;
-  onSave: (entries: RelationEntry[]) => void;
+  onSave: (connections: RelationConnection[]) => void;
 }
 
-interface Picker { entryIndex: number; targetId: string; anchor: HTMLElement }
+interface Picker { otherId: string; anchor: HTMLElement }
 
 export function RelationsModal({ open, others, value, onCancel, onSave }: Props) {
-  const [entries, setEntries] = useState<RelationEntry[]>(value);
+  const [rows, setRows] = useState<RelationConnection[]>(value);
   const [picker, setPicker] = useState<Picker | null>(null);
   const [draft, setDraft] = useState(EDGE_COLOR);
+  const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
 
-  useEffect(() => { if (open) setEntries(value); }, [open]);
+  useEffect(() => { if (open) setRows(value); }, [open]);
 
   useBackClose(open, onCancel);
   useBackClose(!!picker, () => setPicker(null));
-
-  const update = (i: number, patch: Partial<RelationEntry>) =>
-    setEntries((e) => e.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  useBackClose(!!addAnchor, () => setAddAnchor(null));
 
   const nameOf = (id: string) => {
     const c = others.find((o) => o.id === id);
     return c ? `${c.firstName} ${c.lastName ?? ""}`.trim() : id;
   };
 
-  const setColor = (entryIndex: number, targetId: string, color: string) =>
-    setEntries((es) =>
-      es.map((e, i) =>
-        i === entryIndex
-          ? { ...e, targets: e.targets.map((t) => (t.id === targetId ? { ...t, color } : t)) }
-          : e,
-      ),
-    );
+  const connectedIds = new Set(rows.map((r) => r.otherId));
+  const available = others.filter((o) => !connectedIds.has(o.id));
 
-  const openPicker = (entryIndex: number, targetId: string, anchor: HTMLElement) => {
-    const cur = entries[entryIndex].targets.find((t) => t.id === targetId)?.color ?? EDGE_COLOR;
-    setDraft(cur);
-    setPicker({ entryIndex, targetId, anchor });
+  const addConnection = (otherId: string) => {
+    setRows((rs) => [...rs, { otherId, role: "", color: null }]);
+    setAddAnchor(null);
+  };
+  const removeRow = (otherId: string) => setRows((rs) => rs.filter((r) => r.otherId !== otherId));
+  const setRole = (otherId: string, role: string) =>
+    setRows((rs) => rs.map((r) => (r.otherId === otherId ? { ...r, role } : r)));
+  const setColor = (otherId: string, color: string) =>
+    setRows((rs) => rs.map((r) => (r.otherId === otherId ? { ...r, color } : r)));
+
+  const openPicker = (otherId: string, anchor: HTMLElement) => {
+    setDraft(rows.find((r) => r.otherId === otherId)?.color ?? EDGE_COLOR);
+    setPicker({ otherId, anchor });
   };
 
   const validDraft = HEX.test(draft) ? draft : EDGE_COLOR;
-
   const applyHsva = (patch: { h?: number; s?: number; v?: number }) => {
     if (!picker) return;
     const next = hsvaToHex({ ...hexToHsva(validDraft), ...patch });
     setDraft(next);
-    setColor(picker.entryIndex, picker.targetId, next);
+    setColor(picker.otherId, next);
   };
-
   const onHexInput = (v: string) => {
     setDraft(v);
-    if (HEX.test(v) && picker) setColor(picker.entryIndex, picker.targetId, v);
+    if (HEX.test(v) && picker) setColor(picker.otherId, v);
   };
 
   return (
@@ -74,111 +73,67 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
       <DialogTitle>Связи</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          «Я — [роль] для выбранных». Например: роль «сын» → Пётр, Жанна.
+          Связь общая для пары персонажей. Роль — симметричная метка (например «друзья», «семья»).
         </Typography>
         <Stack spacing={2}>
-          {entries.map((entry, i) => (
-            <Box key={i} sx={{ p: 2, border: "1px solid #eee", borderRadius: 2 }}>
+          {rows.map((row) => (
+            <Box key={row.otherId} sx={{ p: 2, border: "1px solid #eee", borderRadius: 2 }}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  label="Роль"
-                  value={entry.role}
-                  inputProps={{ maxLength: 30 }}
-                  helperText="Необязательно"
-                  onChange={(e) => update(i, { role: e.target.value })}
-                  fullWidth
-                />
+                <Typography sx={{ flex: 1, minWidth: 0 }} noWrap>{nameOf(row.otherId)}</Typography>
                 <IconButton
-                  aria-label="удалить связь"
-                  onClick={() => setEntries((e) => e.filter((_, idx) => idx !== i))}
+                  aria-label={`цвет линии для ${nameOf(row.otherId)}`}
+                  onClick={(ev) => openPicker(row.otherId, ev.currentTarget)}
+                >
+                  <Box sx={{
+                    width: 22, height: 22, borderRadius: "50%",
+                    bgcolor: row.color ?? EDGE_COLOR, border: "1px solid #ccc",
+                  }} />
+                </IconButton>
+                <IconButton
+                  aria-label={`удалить связь с ${nameOf(row.otherId)}`}
+                  onClick={() => removeRow(row.otherId)}
                 >
                   <DeleteIcon />
                 </IconButton>
               </Stack>
-              <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel id={`tgt-${i}`}>Связь</InputLabel>
-                <Select
-                  labelId={`tgt-${i}`}
-                  multiple
-                  value={entry.targets.map((t) => t.id)}
-                  input={<OutlinedInput label="Связь" />}
-                  onChange={(e) => {
-                    const ids = typeof e.target.value === "string"
-                      ? e.target.value.split(",")
-                      : e.target.value;
-                    update(i, {
-                      targets: ids.map(
-                        (id) => entry.targets.find((t) => t.id === id) ?? { id, color: null },
-                      ),
-                    });
-                  }}
-                  renderValue={(ids) => (
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {ids.map((id) => <Chip key={id} label={nameOf(id)} size="small" />)}
-                    </Box>
-                  )}
-                >
-                  {others.map((o) => (
-                    <MenuItem key={o.id} value={o.id}>{`${o.firstName} ${o.lastName ?? ""}`.trim()}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              {entry.targets.length > 0 && (
-                <Stack spacing={1} sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">Цвета линий</Typography>
-                  {entry.targets.map((t) => (
-                    <Stack
-                      key={t.id}
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      justifyContent="space-between"
-                    >
-                      <Typography variant="body2">{nameOf(t.id)}</Typography>
-                      <IconButton
-                        aria-label={`цвет линии для ${nameOf(t.id)}`}
-                        onClick={(ev) => openPicker(i, t.id, ev.currentTarget)}
-                      >
-                        <Box sx={{
-                          width: 22, height: 22, borderRadius: "50%",
-                          bgcolor: t.color ?? EDGE_COLOR, border: "1px solid #ccc",
-                        }} />
-                      </IconButton>
-                    </Stack>
-                  ))}
-                </Stack>
-              )}
+              <TextField
+                label="Роль"
+                value={row.role}
+                inputProps={{ maxLength: 30 }}
+                helperText="Необязательно"
+                onChange={(e) => setRole(row.otherId, e.target.value)}
+                fullWidth
+                sx={{ mt: 2 }}
+              />
             </Box>
           ))}
         </Stack>
-        <Button sx={{ mt: 2 }} onClick={() => setEntries((e) => [...e, { role: "", targets: [] }])}>
-          + Добавить связь
-        </Button>
+        {available.length > 0 && (
+          <>
+            <Button sx={{ mt: 2 }} onClick={(e) => setAddAnchor(e.currentTarget)}>
+              + Добавить связь
+            </Button>
+            <Menu anchorEl={addAnchor} open={!!addAnchor} onClose={() => setAddAnchor(null)}>
+              {available.map((o) => (
+                <MenuItem key={o.id} onClick={() => addConnection(o.id)}>
+                  {`${o.firstName} ${o.lastName ?? ""}`.trim()}
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Отмена</Button>
-        <Button variant="contained" onClick={() => onSave(entries)}>Сохранить</Button>
+        <Button variant="contained" onClick={() => onSave(rows)}>Сохранить</Button>
       </DialogActions>
 
       <Popper open={!!picker} anchorEl={picker?.anchor ?? null} placement="bottom" sx={{ zIndex: 1400 }}>
         <ClickAwayListener onClickAway={() => setPicker(null)}>
           <Paper sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
-            <Wheel
-              color={hexToHsva(validDraft)}
-              onChange={(c) => applyHsva({ h: c.hsva.h, s: c.hsva.s })}
-            />
-            <ShadeSlider
-              hsva={hexToHsva(validDraft)}
-              style={{ width: 210 }}
-              onChange={(s) => applyHsva(s)}
-            />
-            <TextField
-              label="HEX"
-              size="small"
-              value={draft}
-              onChange={(e) => onHexInput(e.target.value)}
-              sx={{ width: 210 }}
-            />
+            <Wheel color={hexToHsva(validDraft)} onChange={(c) => applyHsva({ h: c.hsva.h, s: c.hsva.s })} />
+            <ShadeSlider hsva={hexToHsva(validDraft)} style={{ width: 210 }} onChange={(s) => applyHsva(s)} />
+            <TextField label="HEX" size="small" value={draft} onChange={(e) => onHexInput(e.target.value)} sx={{ width: 210 }} />
           </Paper>
         </ClickAwayListener>
       </Popper>

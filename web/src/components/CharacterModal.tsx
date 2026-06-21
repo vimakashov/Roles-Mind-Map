@@ -4,7 +4,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   MenuItem, Stack, Box, IconButton, Menu,
 } from "@mui/material";
-import type { Character, Gender, RelationEntry } from "../types.js";
+import type { Character, Gender, RelationConnection } from "../types.js";
 import { characterFormSchema } from "../lib/validation.js";
 import { Avatar } from "./Avatar.js";
 import { RelationsModal } from "./RelationsModal.js";
@@ -43,7 +43,7 @@ export function CharacterModal({
   const [lastName, setLastName] = useState(initial?.lastName ?? "");
   const [middleName, setMiddleName] = useState(initial?.middleName ?? "");
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
-  const [relations, setRelations] = useState<RelationEntry[]>(initial?.relations ?? empty.relations);
+  const [relations, setRelations] = useState<RelationConnection[]>(initial?.relations ?? empty.relations);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [relationsOpen, setRelationsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);

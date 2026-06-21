@@ -34,14 +34,10 @@ export interface BookGraph {
   edges: Relationship[];
 }
 
-/** A relation target and the colour of its line (null = default). */
-export interface RelationTarget {
-  id: string;
-  color: string | null;
-}
-
-/** UI-level grouping: one role with its selected targets. */
-export interface RelationEntry {
+/** One undirected connection from a character's perspective:
+ *  the other endpoint, a symmetric label, and the line colour (null = default). */
+export interface RelationConnection {
+  otherId: string;
   role: string;
-  targets: RelationTarget[];
+  color: string | null;
 }
