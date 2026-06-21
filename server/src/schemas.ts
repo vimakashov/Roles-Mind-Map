@@ -21,6 +21,7 @@ export const characterCreateSchema = z.object({
   lastName: name30.optional().nullable(),
   middleName: name30.optional().nullable(),
   age: z.number().int().min(0).max(100).optional().nullable(),
+  deceased: z.boolean().optional().default(false),
   relations: z.array(relationConnectionSchema).default([]),
 });
 
