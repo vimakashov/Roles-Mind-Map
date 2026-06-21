@@ -8,7 +8,7 @@ Roles-Mind-Map — a simple mind map for book characters (per `README.md`). Apac
 
 ## Status
 
-Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, per-edge relationship line colours, PWA).
+Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, per-edge relationship line colours, system Back button closes the top-most modal, PWA).
 
 ### Commands
 
@@ -54,6 +54,8 @@ Data persists in the `rmm-data` Docker volume.
 
 - **Schematic (default)** — `web/src/lib/avatarSvg.ts` exposes `avatarSvgMarkup(gender, age)`, the single source of truth for the silhouette (gender colour + age-based head radius). It is consumed two ways from the same call: the React `Avatar` component renders it via `dangerouslySetInnerHTML`, and `graphAdapter.ts` emits it as a `data:image/svg+xml,` URI (`avatarUri`) used as the Cytoscape node `background-image`. Don't re-inline the SVG geometry anywhere else.
 - **Custom (uploaded)** — no server-side image processing (pure-JS server preserved). The browser validates the file (`web/src/lib/avatarImage.ts`: type/size, then pixel dims via `loadImage`), the user circular-crops it (`AvatarCropDialog` + `react-easy-crop`), and `bakeToWebp` renders the crop to a **512×512 WebP** blob. Only that small blob is uploaded as base64 JSON via `api.setAvatar` to `PUT /api/characters/:id/avatar` (validated by `avatarUploadSchema`; mime literal `image/webp`, max dim, 2 MB decoded byte cap). Bytes are served from `GET /api/characters/:id/avatar` (used as both `<img src>` and the Cytoscape `background-image`) and removed via `DELETE`. The graph payload exposes only `avatarUpdatedAt` (never bytes); when set, `Avatar`/`graphAdapter.ts` build the GET URL with a `?v=<avatarUpdatedAt>` cache-bust (`api.avatarUrl`) instead of the schematic data URI. `CharacterModal` stages the change (`AvatarChange` = none/set/remove) locally and `BookScreen.submit` reconciles it after the character save (cancel discards the staging).
+
+**Back-button modal handling** — the browser/system Back button closes the top-most open overlay (peeling one layer per press) instead of navigating the router. A singleton History-API manager (`web/src/lib/backStack.ts`) keeps a stack of open overlays plus a count of throwaway history "sentinels"; the thin `useBackClose(open, onClose)` hook (`web/src/lib/useBackClose.ts`) wires each overlay in. Wired overlays: `ConfirmDialog`, `AvatarCropDialog` (ignores Back while baking), `CharacterModal` + its avatar `Menu`, `RelationsModal` + its colour `Popper`, `BooksScreen` new-book dialog, `BookScreen` rename + delete-book dialogs. See the Gotchas entry for the same-URL sentinel / `guardedPops` mechanics.
 
 ### Gotchas (learned the hard way — keep in mind)
 
