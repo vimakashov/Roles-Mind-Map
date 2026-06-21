@@ -60,7 +60,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
           style: {
             label: "data(label)",
             "curve-style": "bezier",
-            "target-arrow-shape": "triangle",
+            "target-arrow-shape": "none",
             "line-color": (ele: any) => ele.data("color") || EDGE_COLOR,
             "target-arrow-color": (ele: any) => ele.data("color") || EDGE_COLOR,
             width: 2,
