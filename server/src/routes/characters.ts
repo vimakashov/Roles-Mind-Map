@@ -1,16 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { reconcileRelationships } from "../services/relationships.js";
+import { reconcileComments } from "../services/comments.js";
 import { characterCreateSchema, characterUpdateSchema, positionSchema, avatarUploadSchema, AVATAR_MAX_BYTES } from "../schemas.js";
 
 export async function characterRoutes(app: FastifyInstance) {
   app.post("/api/characters", async (req, reply) => {
     const parsed = characterCreateSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    const { bookId, relations, comments: _comments, ...fields } = parsed.data;
+    const { bookId, relations, comments, ...fields } = parsed.data;
     const character = await prisma.$transaction(async (tx) => {
       const c = await tx.character.create({ data: { bookId, ...fields } });
       await reconcileRelationships(tx, bookId, c.id, relations);
+      await reconcileComments(tx, c.id, comments);
       return c;
     });
     return reply.code(201).send(character);
@@ -19,10 +21,11 @@ export async function characterRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/api/characters/:id", async (req, reply) => {
     const parsed = characterUpdateSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    const { relations, comments: _comments, ...fields } = parsed.data;
+    const { relations, comments, ...fields } = parsed.data;
     const character = await prisma.$transaction(async (tx) => {
       const c = await tx.character.update({ where: { id: req.params.id }, data: fields });
       await reconcileRelationships(tx, c.bookId, c.id, relations);
+      await reconcileComments(tx, c.id, comments);
       return c;
     });
     return character;
