@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { __resetBackStack } from "../../lib/backStack.js";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
@@ -146,7 +146,9 @@ test("Back closes the rename dialog instead of navigating", async () => {
   expect(await screen.findByText("Переименовать книгу")).toBeInTheDocument();
   await new Promise<void>((r) => queueMicrotask(() => r()));
 
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  act(() => {
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
   await waitFor(() =>
     expect(screen.queryByText("Переименовать книгу")).not.toBeInTheDocument(),
   );
