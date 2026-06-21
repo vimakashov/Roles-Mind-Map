@@ -8,12 +8,14 @@ import { api } from "../api/client.js";
 import type { Book } from "../types.js";
 import { TopBar } from "../components/TopBar.js";
 import { AddFab } from "../components/AddFab.js";
+import { useBackClose } from "../lib/useBackClose.js";
 
 export function BooksScreen() {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  useBackClose(open, () => setOpen(false));
   const [title, setTitle] = useState("");
 
   useEffect(() => {
