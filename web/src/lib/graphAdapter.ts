@@ -1,7 +1,7 @@
 import type { BookGraph } from "../types.js";
 import { api } from "../api/client.js";
 import { avatarKey } from "./avatar.js";
-import { avatarSvgMarkup } from "./avatarSvg.js";
+import { avatarSvgMarkup, deceasedOverlaySvg } from "./avatarSvg.js";
 import { POSITION_SCALE } from "./layout.js";
 
 export interface CyElement {
@@ -19,6 +19,9 @@ export function toElements(graph: BookGraph): CyElement[] {
         avatarUri: c.avatarUpdatedAt
           ? api.avatarUrl(c.id, c.avatarUpdatedAt)
           : "data:image/svg+xml," + encodeURIComponent(avatarSvgMarkup(c.gender, c.age, { sized: true })),
+        overlayUri: c.deceased
+          ? "data:image/svg+xml," + encodeURIComponent(deceasedOverlaySvg({ sized: true }))
+          : null,
         gender: c.gender,
       },
     };

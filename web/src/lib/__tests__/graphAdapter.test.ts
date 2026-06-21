@@ -86,3 +86,21 @@ test("schematic data URI carries explicit width/height so background-fit cover c
   expect(svg).toContain('width="100"');
   expect(svg).toContain('height="100"');
 });
+
+test("deceased node carries an encoded overlay data URI", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "d", bookId: "b", gender: "male", firstName: "Х", lastName: "Х", deceased: true }],
+    edges: [],
+  };
+  const node = toElements(g)[0];
+  expect(node.data.overlayUri as string).toContain("data:image/svg+xml,");
+  expect(node.data.overlayUri as string).toContain("deceased");
+});
+
+test("living node has a null overlay (so the canvas clears a stale overlay)", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "a", bookId: "b", gender: "male", firstName: "Х", lastName: "Х" }],
+    edges: [],
+  };
+  expect(toElements(g)[0].data.overlayUri).toBeNull();
+});
