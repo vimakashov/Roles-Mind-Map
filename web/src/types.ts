@@ -18,6 +18,7 @@ export interface Character {
   posY?: number | null;
   avatarUpdatedAt?: string | null;
   deceased?: boolean;
+  comments?: CommentItem[];
 }
 
 export interface Relationship {
@@ -41,4 +42,10 @@ export interface RelationConnection {
   otherId: string;
   role: string;
   color: string | null;
+}
+
+/** One staged comment: a free-form note. `id` is null until persisted. */
+export interface CommentItem {
+  id: string | null;
+  text: string;
 }

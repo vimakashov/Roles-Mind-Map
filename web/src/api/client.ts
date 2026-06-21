@@ -1,4 +1,4 @@
-import type { Book, BookGraph, Character, RelationConnection } from "../types.js";
+import type { Book, BookGraph, Character, CommentItem, RelationConnection } from "../types.js";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   // Only declare a JSON content-type when we actually send a body. Setting it on
@@ -38,6 +38,7 @@ export interface CharacterInput {
   age?: number | null;
   deceased: boolean;
   relations: RelationConnection[];
+  comments?: CommentItem[];
 }
 
 export const api = {
