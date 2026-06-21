@@ -3,6 +3,7 @@ import Cropper from "react-easy-crop";
 import type { Area } from "react-easy-crop";
 import { Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button, Slider, Box } from "@mui/material";
 import { bakeToWebp, loadImage, type CropArea } from "../lib/avatarImage.js";
+import { useBackClose } from "../lib/useBackClose.js";
 
 interface Props {
   open: boolean;
@@ -23,6 +24,10 @@ export function AvatarCropDialog({ open, file, onCancel, onSave }: Props) {
 
   // Reset transform whenever a new file is chosen.
   useEffect(() => { setCrop({ x: 0, y: 0 }); setZoom(1); setArea(null); setError(null); }, [file]);
+
+  // Back closes the dialog, but never while a WebP bake is in flight (mirrors
+  // the disabled onClose below).
+  useBackClose(open, () => { if (!busy) onCancel(); });
 
   const save = async () => {
     if (busy || !file || !area) return;

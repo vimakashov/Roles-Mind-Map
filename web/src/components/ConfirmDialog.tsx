@@ -1,4 +1,5 @@
 import { Dialog, DialogActions, DialogContent, DialogTitle, Button } from "@mui/material";
+import { useBackClose } from "../lib/useBackClose.js";
 
 interface Props {
   open: boolean;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ConfirmDialog({ open, title, message, onCancel, onConfirm }: Props) {
+  useBackClose(open, onCancel);
   return (
     <Dialog open={open} onClose={onCancel}>
       <DialogTitle>{title}</DialogTitle>
