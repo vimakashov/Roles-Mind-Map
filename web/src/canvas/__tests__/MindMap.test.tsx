@@ -54,3 +54,16 @@ test("tapping a node calls the latest onNodeTap after an attribute-only graph up
   expect(tapV1).toHaveBeenCalledWith("c1");
   expect(tapV0).not.toHaveBeenCalled();
 });
+
+test("renders edges without an arrowhead (undirected)", () => {
+  const graph: BookGraph = {
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" },
+      { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" },
+    ],
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "друзья", color: null }],
+  };
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} />);
+  const cy = instances[0];
+  expect(cy.getElementById("e1").style("target-arrow-shape")).toBe("none");
+});

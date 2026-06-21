@@ -54,7 +54,7 @@ model Relationship {
   source    Character @relation("source", fields: [sourceId], references: [id], onDelete: Cascade)
   target    Character @relation("target", fields: [targetId], references: [id], onDelete: Cascade)
 
-  @@unique([sourceId, targetId, role])
+  @@unique([sourceId, targetId])
 }
 
 model CharacterAvatar {

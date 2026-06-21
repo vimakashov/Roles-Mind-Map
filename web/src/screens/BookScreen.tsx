@@ -8,7 +8,7 @@ import { AddFab } from "../components/AddFab.js";
 import { CharacterModal, type AvatarChange } from "../components/CharacterModal.js";
 import { ConfirmDialog } from "../components/ConfirmDialog.js";
 import { MindMap } from "../canvas/MindMap.js";
-import { groupEdges } from "../lib/relations.js";
+import { incidentConnections } from "../lib/relations.js";
 import { useBackClose } from "../lib/useBackClose.js";
 
 export function BookScreen() {
@@ -37,7 +37,7 @@ export function BookScreen() {
     lastName: modal.character.lastName,
     middleName: modal.character.middleName ?? "",
     age: modal.character.age ?? null,
-    relations: groupEdges(modal.character.id, graph.edges),
+    relations: incidentConnections(modal.character.id, graph.edges),
   };
 
   const submit = async (input: CharacterInput, avatar: AvatarChange) => {
