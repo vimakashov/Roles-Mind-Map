@@ -1,14 +1,15 @@
 import { z } from "zod";
 
 const name30 = z.string().trim().min(1).max(30);
+const title60 = z.string().trim().min(1).max(60);
 
-export const bookCreateSchema = z.object({ title: name30 });
-export const bookUpdateSchema = z.object({ title: name30 });
+export const bookCreateSchema = z.object({ title: title60 });
+export const bookUpdateSchema = z.object({ title: title60 });
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 export const relationEntrySchema = z.object({
-  role: name30,
+  role: z.string().trim().max(30).optional().default(""),
   targets: z.array(
     z.object({
       id: z.string().min(1),
@@ -21,7 +22,7 @@ export const characterCreateSchema = z.object({
   bookId: z.string().min(1),
   gender: z.enum(["male", "female"]),
   firstName: name30,
-  lastName: name30,
+  lastName: name30.optional().nullable(),
   middleName: name30.optional().nullable(),
   age: z.number().int().min(0).max(100).optional().nullable(),
   relations: z.array(relationEntrySchema).default([]),

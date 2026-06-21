@@ -46,6 +46,19 @@ test("creates character with relations and returns graph", async () => {
   expect(graph.edges).toHaveLength(1);
 });
 
+test("creates a character with no lastName", async () => {
+  const book = await createBook();
+  const res = await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "Платон", relations: [] },
+  });
+  expect(res.statusCode).toBe(201);
+  expect(res.json().lastName).toBeNull();
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.nodes[0]).toMatchObject({ firstName: "Платон", lastName: null });
+});
+
 test("updates character relations via reconciliation", async () => {
   const book = await createBook();
   const t = (n: string) => app.inject({
@@ -88,6 +101,34 @@ test("saves node position", async () => {
   expect(res.statusCode).toBe(200);
   const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0]).toMatchObject({ posX: 12, posY: 34 });
+});
+
+test("accepts 60-char book title on create", async () => {
+  const title60 = "A".repeat(60);
+  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title: title60 } });
+  expect(res.statusCode).toBe(201);
+  expect(res.json().title).toBe(title60);
+});
+
+test("rejects 61-char book title on create", async () => {
+  const title61 = "A".repeat(61);
+  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title: title61 } });
+  expect(res.statusCode).toBe(400);
+});
+
+test("accepts 60-char book title on rename", async () => {
+  const book = await createBook();
+  const title60 = "B".repeat(60);
+  const res = await app.inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title60 } });
+  expect(res.statusCode).toBe(200);
+  expect(res.json().title).toBe(title60);
+});
+
+test("rejects 61-char book title on rename", async () => {
+  const book = await createBook();
+  const title61 = "B".repeat(61);
+  const res = await app.inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title61 } });
+  expect(res.statusCode).toBe(400);
 });
 
 test("returns 404 for non-existent ids on update and delete", async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
 import { api, type CharacterInput } from "../api/client.js";
 import type { BookGraph, Character } from "../types.js";
 import { TopBar } from "../components/TopBar.js";
@@ -13,10 +13,12 @@ import { groupEdges } from "../lib/relations.js";
 export function BookScreen() {
   const { bookId } = useParams();
   const navigate = useNavigate();
-  const [graph, setGraph] = useState<BookGraph>({ nodes: [], edges: [] });
+  const [graph, setGraph] = useState<BookGraph>({ title: "", nodes: [], edges: [] });
   const [loaded, setLoaded] = useState(false);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; character?: Character } | null>(null);
   const [deleteBookOpen, setDeleteBookOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameTitle, setRenameTitle] = useState("");
 
   const refresh = () => api.getGraph(bookId!).then((g) => { setGraph(g); setLoaded(true); });
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [bookId]);
@@ -60,11 +62,23 @@ export function BookScreen() {
     navigate("/");
   };
 
+  const renameBook = async () => {
+    const trimmed = renameTitle.trim();
+    if (!trimmed) return;
+    await api.updateBook(bookId!, trimmed);
+    setRenameOpen(false);
+    await refresh();
+  };
+
   const empty = loaded && graph.nodes.length === 0;
 
   return (
     <Box sx={{ minHeight: "100dvh", position: "relative" }}>
-      <TopBar onBack={() => navigate("/")} onDelete={() => setDeleteBookOpen(true)} />
+      <TopBar
+        onBack={() => navigate("/")}
+        onEdit={() => { setRenameTitle(graph.title ?? ""); setRenameOpen(true); }}
+        onDelete={() => setDeleteBookOpen(true)}
+      />
       {empty ? (
         <Box sx={{ minHeight: "70dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3 }}>
           <Typography variant="h5">Персонажей пока нет</Typography>
@@ -108,6 +122,19 @@ export function BookScreen() {
         onCancel={() => setDeleteBookOpen(false)}
         onConfirm={() => { setDeleteBookOpen(false); void removeBook(); }}
       />
+
+      <Dialog open={renameOpen} onClose={() => setRenameOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Переименовать книгу</DialogTitle>
+        <DialogContent>
+          <TextField autoFocus fullWidth label="Название" value={renameTitle} sx={{ mt: 1 }}
+            inputProps={{ maxLength: 60 }} onChange={(e) => setRenameTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void renameBook(); }} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameOpen(false)}>Отмена</Button>
+          <Button variant="contained" onClick={() => void renameBook()}>Сохранить</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

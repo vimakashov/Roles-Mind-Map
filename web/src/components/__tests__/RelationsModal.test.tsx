@@ -49,3 +49,20 @@ test("picks a colour for a target via the hex input", async () => {
     { role: "друг", targets: [{ id: "p", color: "#112233" }] },
   ]);
 });
+
+test("saves an entry with an empty role", async () => {
+  const onSave = vi.fn();
+  render(
+    <RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  // Leave the role blank, just save.
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+  expect(onSave).toHaveBeenCalledWith([{ role: "", targets: [] }]);
+});
+
+test("the role field is marked optional", async () => {
+  render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={() => {}} />);
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  expect(screen.getByText(/необязательно/i)).toBeInTheDocument();
+});
