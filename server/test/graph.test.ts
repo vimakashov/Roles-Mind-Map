@@ -13,6 +13,7 @@ test("returns nodes and edges for a book", async () => {
   await prisma.relationship.create({ data: { bookId: book.id, sourceId: a.id, targetId: b.id, role: "муж" } });
 
   const graph = await getBookGraph(book.id);
+  expect(graph.title).toBe("B");
   expect(graph.nodes).toHaveLength(2);
   expect(graph.edges).toHaveLength(1);
   expect(graph.edges[0]).toMatchObject({ sourceId: a.id, targetId: b.id, role: "муж" });

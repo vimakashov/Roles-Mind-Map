@@ -29,6 +29,7 @@ export interface Relationship {
 }
 
 export interface BookGraph {
+  title?: string;
   nodes: Character[];
   edges: Relationship[];
 }

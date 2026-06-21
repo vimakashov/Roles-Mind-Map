@@ -1,7 +1,8 @@
 import { prisma } from "../db.js";
 
 export async function getBookGraph(bookId: string) {
-  const [rows, edges] = await Promise.all([
+  const [book, rows, edges] = await Promise.all([
+    prisma.book.findUnique({ where: { id: bookId }, select: { title: true } }),
     prisma.character.findMany({
       where: { bookId },
       orderBy: { createdAt: "asc" },
@@ -13,5 +14,5 @@ export async function getBookGraph(bookId: string) {
     ...c,
     avatarUpdatedAt: avatar?.updatedAt ?? null,
   }));
-  return { nodes, edges };
+  return { title: book?.title ?? "", nodes, edges };
 }
