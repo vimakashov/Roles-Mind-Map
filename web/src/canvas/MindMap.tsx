@@ -41,7 +41,9 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
               ele.data("overlayUri")
                 ? [ele.data("avatarUri"), ele.data("overlayUri")]
                 : ele.data("avatarUri"),
-            "background-fit": (ele: any) => (ele.data("overlayUri") ? ["cover", "cover"] : "cover"),
+            // Cytoscape's types reject array values for background-fit even though the runtime accepts
+            // them for layered background-image; cast to suppress the false-positive TS error.
+            "background-fit": (ele: any) => (ele.data("overlayUri") ? ["cover", "cover"] : "cover") as any,
             "border-width": 2,
             "border-color": "#ffffff",
             label: "data(label)",
