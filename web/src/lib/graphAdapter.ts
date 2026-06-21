@@ -18,7 +18,7 @@ export function toElements(graph: BookGraph): CyElement[] {
         avatar: avatarKey(c.gender, c.age),
         avatarUri: c.avatarUpdatedAt
           ? api.avatarUrl(c.id, c.avatarUpdatedAt)
-          : "data:image/svg+xml," + encodeURIComponent(avatarSvgMarkup(c.gender, c.age)),
+          : "data:image/svg+xml," + encodeURIComponent(avatarSvgMarkup(c.gender, c.age, { sized: true })),
         gender: c.gender,
       },
     };

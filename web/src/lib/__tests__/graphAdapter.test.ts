@@ -76,3 +76,13 @@ test("node without avatarUpdatedAt keeps the schematic data URI", () => {
   const node = toElements(g)[0];
   expect(node.data.avatarUri as string).toContain("data:image/svg+xml,");
 });
+
+test("schematic data URI carries explicit width/height so background-fit cover centres on every browser", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b", gender: "male", firstName: "Я", lastName: "Я", avatarUpdatedAt: null }],
+    edges: [],
+  };
+  const svg = decodeURIComponent((toElements(g)[0].data.avatarUri as string).replace("data:image/svg+xml,", ""));
+  expect(svg).toContain('width="100"');
+  expect(svg).toContain('height="100"');
+});

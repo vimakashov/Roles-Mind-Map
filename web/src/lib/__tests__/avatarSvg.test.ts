@@ -10,6 +10,18 @@ test("returns a standalone SVG string with xmlns and gender-colour fill", () => 
   expect(svg).toContain('data-avatar="male-adult"');
 });
 
+test("omits explicit width/height by default so the inline SVG fills its span at 100%", () => {
+  const svg = avatarSvgMarkup("male", 30);
+  expect(svg).not.toContain("width=");
+  expect(svg).not.toContain("height=");
+});
+
+test("emits explicit pixel width/height when sized (deterministic intrinsic size for background-image)", () => {
+  const svg = avatarSvgMarkup("male", 30, { sized: true });
+  expect(svg).toContain('width="100"');
+  expect(svg).toContain('height="100"');
+});
+
 test("head radius reflects the age stage", () => {
   expect(avatarSvgMarkup("female", 8)).toContain('r="18"');  // child: 0.18 * 100
   expect(avatarSvgMarkup("female", 14)).toContain('r="20"'); // teen:  0.20 * 100
