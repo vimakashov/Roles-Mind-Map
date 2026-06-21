@@ -80,6 +80,7 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
                   label="Роль"
                   value={entry.role}
                   inputProps={{ maxLength: 30 }}
+                  helperText="Необязательно"
                   onChange={(e) => update(i, { role: e.target.value })}
                   fullWidth
                 />
