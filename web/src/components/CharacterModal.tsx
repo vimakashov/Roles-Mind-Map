@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useBackClose } from "../lib/useBackClose.js";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   MenuItem, Stack, Box, IconButton, Menu,
@@ -66,6 +67,9 @@ export function CharacterModal({
     : avatar.kind === "remove" ? null
     : avatarUpdatedAt && characterId ? api.avatarUrl(characterId, avatarUpdatedAt)
     : null;
+
+  useBackClose(open, onCancel);
+  useBackClose(!!menuAnchor, () => setMenuAnchor(null));
 
   const pickFile = (input: HTMLInputElement) => {
     const file = input.files?.[0];

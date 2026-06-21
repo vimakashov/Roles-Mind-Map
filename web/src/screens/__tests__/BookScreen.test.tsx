@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { __resetBackStack } from "../../lib/backStack.js";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { expect, test, vi, beforeEach } from "vitest";
@@ -130,4 +131,25 @@ test("renames the book from the top bar pencil", async () => {
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
 
   await waitFor(() => expect(api.updateBook).toHaveBeenCalledWith("b1", "Анна Каренина"));
+});
+
+test("Back closes the rename dialog instead of navigating", async () => {
+  __resetBackStack();
+  vi.spyOn(window.history, "pushState").mockImplementation(() => {});
+  vi.spyOn(window.history, "go").mockImplementation(() => {});
+  // renderBookScreen() is the existing helper in this file that mounts
+  // BookScreen under MemoryRouter at /books/b1 with api mocked.
+  renderBookScreen();
+  await screen.findByText(/./); // wait for first render/graph load as existing tests do
+
+  await userEvent.click(screen.getByRole("button", { name: /переименовать книгу/i }));
+  expect(await screen.findByText("Переименовать книгу")).toBeInTheDocument();
+  await new Promise<void>((r) => queueMicrotask(() => r()));
+
+  act(() => {
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await waitFor(() =>
+    expect(screen.queryByText("Переименовать книгу")).not.toBeInTheDocument(),
+  );
 });

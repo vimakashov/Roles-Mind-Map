@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useBackClose } from "../lib/useBackClose.js";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   Box, IconButton, MenuItem, Select, InputLabel, FormControl, OutlinedInput,
@@ -27,6 +28,9 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
   const [draft, setDraft] = useState(EDGE_COLOR);
 
   useEffect(() => { if (open) setEntries(value); }, [open]);
+
+  useBackClose(open, onCancel);
+  useBackClose(!!picker, () => setPicker(null));
 
   const update = (i: number, patch: Partial<RelationEntry>) =>
     setEntries((e) => e.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));

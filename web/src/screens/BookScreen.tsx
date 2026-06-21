@@ -9,6 +9,7 @@ import { CharacterModal, type AvatarChange } from "../components/CharacterModal.
 import { ConfirmDialog } from "../components/ConfirmDialog.js";
 import { MindMap } from "../canvas/MindMap.js";
 import { groupEdges } from "../lib/relations.js";
+import { useBackClose } from "../lib/useBackClose.js";
 
 export function BookScreen() {
   const { bookId } = useParams();
@@ -19,6 +20,8 @@ export function BookScreen() {
   const [deleteBookOpen, setDeleteBookOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
+  useBackClose(deleteBookOpen, () => setDeleteBookOpen(false));
+  useBackClose(renameOpen, () => setRenameOpen(false));
 
   const refresh = () => api.getGraph(bookId!).then((g) => { setGraph(g); setLoaded(true); });
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [bookId]);
