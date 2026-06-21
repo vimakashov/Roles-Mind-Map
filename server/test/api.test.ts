@@ -46,6 +46,19 @@ test("creates character with relations and returns graph", async () => {
   expect(graph.edges).toHaveLength(1);
 });
 
+test("creates a character with no lastName", async () => {
+  const book = await createBook();
+  const res = await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "Платон", relations: [] },
+  });
+  expect(res.statusCode).toBe(201);
+  expect(res.json().lastName).toBeNull();
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.nodes[0]).toMatchObject({ firstName: "Платон", lastName: null });
+});
+
 test("updates character relations via reconciliation", async () => {
   const book = await createBook();
   const t = (n: string) => app.inject({
