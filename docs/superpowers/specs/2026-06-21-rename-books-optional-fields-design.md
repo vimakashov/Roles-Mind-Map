@@ -37,7 +37,8 @@ rename field can be pre-filled without an extra request:
 
 - `server/src/services/graph.ts` — `getBookGraph` returns `{ title, nodes, edges }`
   (fetch the book's `title`; 404/empty handled as today).
-- `web/src/types.ts` — `BookGraph` gains `title: string`.
+- `web/src/types.ts` — `BookGraph` gains `title?: string` (optional, because `tsc`
+  compiles the `__tests__` fixtures that omit it; the real payload always sets it).
 
 **Frontend.**
 
