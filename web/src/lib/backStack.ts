@@ -16,7 +16,12 @@ let listening = false;
 
 function onPopState() {
   if (guardedPops > 0) {
-    guardedPops--; // our own history.go(-n) echo — ignore
+    // Our own history.go(-n) echo — ignore. `guardedPops` is a count, not a
+    // tagged token, so a real Back press landing in the few-ms window between
+    // a programmatic close's history.go and the browser's async echo is
+    // knowingly absorbed here. Accepted per the design spec ("Close + navigate":
+    // worst case is one extra/missed Back, which is harmless).
+    guardedPops--;
     return;
   }
   if (pushed > 0) {

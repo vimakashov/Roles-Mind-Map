@@ -142,7 +142,7 @@ test("Back closes the rename dialog instead of navigating", async () => {
   renderBookScreen();
   await screen.findByText(/./); // wait for first render/graph load as existing tests do
 
-  await userEvent.click(screen.getByRole("button", { name: /переименовать|изменить/i }));
+  await userEvent.click(screen.getByRole("button", { name: /переименовать книгу/i }));
   expect(await screen.findByText("Переименовать книгу")).toBeInTheDocument();
   await new Promise<void>((r) => queueMicrotask(() => r()));
 
