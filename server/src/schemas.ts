@@ -1,9 +1,10 @@
 import { z } from "zod";
 
 const name30 = z.string().trim().min(1).max(30);
+const title60 = z.string().trim().min(1).max(60);
 
-export const bookCreateSchema = z.object({ title: name30 });
-export const bookUpdateSchema = z.object({ title: name30 });
+export const bookCreateSchema = z.object({ title: title60 });
+export const bookUpdateSchema = z.object({ title: title60 });
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
