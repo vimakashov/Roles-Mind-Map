@@ -14,7 +14,11 @@ async function main() {
   // Collapse legacy duplicate pairs + canonicalise BEFORE the schema push, so the
   // new @@unique([sourceId, targetId]) index can be created on existing volumes.
   await normalizeRelationships();
-  execSync("prisma db push --skip-generate", { stdio: "inherit" });
+  // `--accept-data-loss` is required because Prisma's data-loss guard fires
+  // unconditionally when ADDING a unique constraint (it can't tell the data is
+  // already deduped). It is safe here: normalizeRelationships() ran first, so no
+  // Relationship rows are actually lost — the constraint applies to clean data.
+  execSync("prisma db push --skip-generate --accept-data-loss", { stdio: "inherit" });
   await ensureDefaultUser();
 
   const app = buildApp();
