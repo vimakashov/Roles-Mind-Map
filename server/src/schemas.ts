@@ -8,14 +8,10 @@ export const bookUpdateSchema = z.object({ title: title60 });
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
-export const relationEntrySchema = z.object({
+export const relationConnectionSchema = z.object({
+  otherId: z.string().min(1),
   role: z.string().trim().max(30).optional().default(""),
-  targets: z.array(
-    z.object({
-      id: z.string().min(1),
-      color: hexColor.nullable(),
-    }),
-  ),
+  color: hexColor.nullable(),
 });
 
 export const characterCreateSchema = z.object({
@@ -25,7 +21,7 @@ export const characterCreateSchema = z.object({
   lastName: name30.optional().nullable(),
   middleName: name30.optional().nullable(),
   age: z.number().int().min(0).max(100).optional().nullable(),
-  relations: z.array(relationEntrySchema).default([]),
+  relations: z.array(relationConnectionSchema).default([]),
 });
 
 export const characterUpdateSchema = characterCreateSchema.omit({ bookId: true });
@@ -35,7 +31,7 @@ export const positionSchema = z.object({
   posY: z.number(),
 });
 
-export type RelationEntry = z.infer<typeof relationEntrySchema>;
+export type RelationConnection = z.infer<typeof relationConnectionSchema>;
 export type CharacterCreate = z.infer<typeof characterCreateSchema>;
 export type CharacterUpdate = z.infer<typeof characterUpdateSchema>;
 
