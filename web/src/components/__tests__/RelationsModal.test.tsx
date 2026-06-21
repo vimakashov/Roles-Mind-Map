@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { RelationsModal } from "../RelationsModal.js";
 import type { Character } from "../../types.js";
+import { __resetBackStack } from "../../lib/backStack.js";
 
 // The wheel/shade widgets are third-party canvas-ish components; mock them so the
 // test exercises our modal state via the HEX input deterministically.
@@ -65,4 +66,17 @@ test("the role field is marked optional", async () => {
   render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={() => {}} />);
   await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
   expect(screen.getByText(/необязательно/i)).toBeInTheDocument();
+});
+
+test("Back button cancels the relations modal", async () => {
+  __resetBackStack();
+  vi.spyOn(window.history, "pushState").mockImplementation(() => {});
+  vi.spyOn(window.history, "go").mockImplementation(() => {});
+  const onCancel = vi.fn();
+  render(
+    <RelationsModal open others={others} value={[]} onCancel={onCancel} onSave={() => {}} />,
+  );
+  await new Promise<void>((r) => queueMicrotask(() => r()));
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  expect(onCancel).toHaveBeenCalledTimes(1);
 });

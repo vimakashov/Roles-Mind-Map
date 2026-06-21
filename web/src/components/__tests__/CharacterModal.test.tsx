@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { CharacterModal } from "../CharacterModal.js";
+import { __resetBackStack } from "../../lib/backStack.js";
 
 vi.mock("../AvatarCropDialog.js", () => ({ AvatarCropDialog: () => null }));
 
@@ -65,4 +66,17 @@ test("avatar menu offers Change/Remove when a custom avatar exists, and Remove s
 
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
   expect(onSubmit).toHaveBeenCalledWith(expect.any(Object), { kind: "remove" });
+});
+
+test("Back button cancels the character modal", async () => {
+  __resetBackStack();
+  vi.spyOn(window.history, "pushState").mockImplementation(() => {});
+  vi.spyOn(window.history, "go").mockImplementation(() => {});
+  const onCancel = vi.fn();
+  render(
+    <CharacterModal open mode="create" others={[]} onCancel={onCancel} onSubmit={() => {}} />,
+  );
+  await new Promise<void>((r) => queueMicrotask(() => r()));
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  expect(onCancel).toHaveBeenCalledTimes(1);
 });
