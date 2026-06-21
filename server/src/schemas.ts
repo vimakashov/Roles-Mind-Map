@@ -14,6 +14,11 @@ export const relationConnectionSchema = z.object({
   color: hexColor.nullable(),
 });
 
+export const commentInputSchema = z.object({
+  id: z.string().min(1).nullable().optional().default(null),
+  text: z.string().trim().min(1).max(2000),
+});
+
 export const characterCreateSchema = z.object({
   bookId: z.string().min(1),
   gender: z.enum(["male", "female"]),
@@ -23,6 +28,7 @@ export const characterCreateSchema = z.object({
   age: z.number().int().min(0).max(100).optional().nullable(),
   deceased: z.boolean().optional().default(false),
   relations: z.array(relationConnectionSchema).default([]),
+  comments: z.array(commentInputSchema).default([]),
 });
 
 export const characterUpdateSchema = characterCreateSchema.omit({ bookId: true });
@@ -32,6 +38,7 @@ export const positionSchema = z.object({
   posY: z.number(),
 });
 
+export type CommentInput = z.infer<typeof commentInputSchema>;
 export type RelationConnection = z.infer<typeof relationConnectionSchema>;
 export type CharacterCreate = z.infer<typeof characterCreateSchema>;
 export type CharacterUpdate = z.infer<typeof characterUpdateSchema>;
