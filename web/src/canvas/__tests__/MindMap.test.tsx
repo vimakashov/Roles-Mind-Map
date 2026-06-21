@@ -67,3 +67,17 @@ test("renders edges without an arrowhead (undirected)", () => {
   const cy = instances[0];
   expect(cy.getElementById("e1").style("target-arrow-shape")).toBe("none");
 });
+
+test("a deceased node layers the overlay into its background-image", () => {
+  const graph: BookGraph = {
+    nodes: [
+      { id: "dead", bookId: "b1", gender: "male", firstName: "A", lastName: "X", deceased: true },
+      { id: "alive", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" },
+    ],
+    edges: [],
+  };
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} />);
+  const cy = instances[0];
+  expect(String(cy.getElementById("dead").style("background-image"))).toContain("deceased");
+  expect(String(cy.getElementById("alive").style("background-image"))).not.toContain("deceased");
+});
