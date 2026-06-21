@@ -14,3 +14,19 @@ test("renders an img with circular mask when src is provided", () => {
   expect(el.tagName).toBe("IMG");
   expect(el.getAttribute("src")).toBe("/api/characters/c1/avatar?v=1");
 });
+
+test("draws the deceased overlay over a schematic avatar", () => {
+  render(<Avatar gender="male" age={30} deceased />);
+  expect(screen.getByTestId("avatar-deceased")).toBeInTheDocument();
+});
+
+test("draws the deceased overlay over a custom avatar image", () => {
+  render(<Avatar gender="male" age={30} src="/api/characters/c1/avatar?v=1" deceased />);
+  expect(screen.getByTestId("avatar-img")).toBeInTheDocument();
+  expect(screen.getByTestId("avatar-deceased")).toBeInTheDocument();
+});
+
+test("no overlay when not deceased", () => {
+  render(<Avatar gender="male" age={30} />);
+  expect(screen.queryByTestId("avatar-deceased")).toBeNull();
+});

@@ -179,3 +179,32 @@ test("returns 404 for non-existent ids on update and delete", async () => {
   const del = await app.inject({ method: "DELETE", url: `/api/characters/${nonExistentId}` });
   expect(del.statusCode).toBe(404);
 });
+
+test("persists the deceased flag on create and exposes it in the graph", async () => {
+  const book = await createBook();
+  const res = await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "Boris", lastName: "B", deceased: true, relations: [] },
+  });
+  expect(res.statusCode).toBe(201);
+  expect(res.json().deceased).toBe(true);
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.nodes[0].deceased).toBe(true);
+});
+
+test("defaults deceased to false when omitted and toggles via PATCH", async () => {
+  const book = await createBook();
+  const c = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId: book.id, gender: "male", firstName: "Ivan", lastName: "I", relations: [] },
+  })).json();
+  expect(c.deceased).toBe(false);
+
+  const patched = await app.inject({
+    method: "PATCH", url: `/api/characters/${c.id}`,
+    payload: { gender: "male", firstName: "Ivan", lastName: "I", deceased: true, relations: [] },
+  });
+  expect(patched.statusCode).toBe(200);
+  expect(patched.json().deceased).toBe(true);
+});

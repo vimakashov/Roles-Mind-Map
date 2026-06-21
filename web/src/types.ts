@@ -17,6 +17,7 @@ export interface Character {
   posX?: number | null;
   posY?: number | null;
   avatarUpdatedAt?: string | null;
+  deceased?: boolean;
 }
 
 export interface Relationship {

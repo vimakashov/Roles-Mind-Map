@@ -33,6 +33,7 @@ model Character {
   lastName   String?
   middleName String?
   age        Int?
+  deceased   Boolean  @default(false)
   posX       Float?
   posY       Float?
   createdAt  DateTime @default(now())

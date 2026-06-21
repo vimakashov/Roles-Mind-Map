@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useBackClose } from "../lib/useBackClose.js";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  MenuItem, Stack, Box, IconButton, Menu,
+  MenuItem, Stack, Box, IconButton, Menu, Checkbox, FormControlLabel,
 } from "@mui/material";
 import type { Character, Gender, RelationConnection } from "../types.js";
 import { characterFormSchema } from "../lib/validation.js";
@@ -32,7 +32,7 @@ interface Props {
 }
 
 const empty: CharacterInput = {
-  gender: "male", firstName: "", lastName: "", middleName: "", age: null, relations: [],
+  gender: "male", firstName: "", lastName: "", middleName: "", age: null, deceased: false, relations: [],
 };
 
 export function CharacterModal({
@@ -43,6 +43,7 @@ export function CharacterModal({
   const [lastName, setLastName] = useState(initial?.lastName ?? "");
   const [middleName, setMiddleName] = useState(initial?.middleName ?? "");
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
+  const [deceased, setDeceased] = useState(initial?.deceased ?? false);
   const [relations, setRelations] = useState<RelationConnection[]>(initial?.relations ?? empty.relations);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [relationsOpen, setRelationsOpen] = useState(false);
@@ -108,6 +109,7 @@ export function CharacterModal({
       lastName: lastName.trim() || null,
       middleName: middleName.trim() || null,
       age: age === "" ? null : Number(age),
+      deceased,
       relations,
     }, avatar);
   };
@@ -127,7 +129,7 @@ export function CharacterModal({
                   sx={{ p: 0, borderRadius: "50%" }}
                   aria-label="Аватар"
                 >
-                  <Avatar gender={gender as Gender} age={age === "" ? null : Number(age)} src={avatarSrc} />
+                  <Avatar gender={gender as Gender} age={age === "" ? null : Number(age)} src={avatarSrc} deceased={deceased} />
                 </IconButton>
                 {avatarError && (
                   <Box sx={{ color: "error.main", fontSize: 12, textAlign: "center" }}>{avatarError}</Box>
@@ -147,6 +149,10 @@ export function CharacterModal({
               helperText={errors.middleName ?? "Необязательно, до 30 символов"} onChange={(e) => setMiddleName(e.target.value)} />
             <TextField label="Возраст" value={age} error={!!errors.age}
               helperText={errors.age ?? "Необязательно, 0–100"} onChange={(e) => setAge(e.target.value)} />
+            <FormControlLabel
+              control={<Checkbox checked={deceased} onChange={(e) => setDeceased(e.target.checked)} />}
+              label="Умер"
+            />
             <Box>
               <Button variant="outlined" onClick={() => setRelationsOpen(true)}>
                 Связи ({relations.length})
