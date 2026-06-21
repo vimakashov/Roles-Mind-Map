@@ -36,6 +36,7 @@ export interface CharacterInput {
   lastName?: string | null;
   middleName?: string | null;
   age?: number | null;
+  deceased: boolean;
   relations: RelationConnection[];
 }
 

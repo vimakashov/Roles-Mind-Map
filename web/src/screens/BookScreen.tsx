@@ -37,6 +37,7 @@ export function BookScreen() {
     lastName: modal.character.lastName,
     middleName: modal.character.middleName ?? "",
     age: modal.character.age ?? null,
+    deceased: modal.character.deceased ?? false,
     relations: incidentConnections(modal.character.id, graph.edges),
   };
 

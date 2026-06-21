@@ -30,7 +30,7 @@ test("edit mode shows a delete button", () => {
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "female", firstName: "Аня", lastName: "С", relations: [] }}
+      initial={{ gender: "female", firstName: "Аня", lastName: "С", deceased: false, relations: [] }}
       onCancel={() => {}} onSubmit={() => {}} onDelete={() => {}}
     />,
   );
@@ -41,7 +41,7 @@ test("avatar menu offers Add when the character has no custom avatar", async () 
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
       characterId="c1"
       onCancel={() => {}} onSubmit={() => {}} onDelete={() => {}}
     />,
@@ -55,7 +55,7 @@ test("avatar menu offers Change/Remove when a custom avatar exists, and Remove s
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
       characterId="c1" avatarUpdatedAt="2026-06-18T00:00:00.000Z"
       onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
     />,
@@ -79,4 +79,37 @@ test("Back button cancels the character modal", async () => {
   await new Promise<void>((r) => queueMicrotask(() => r()));
   window.dispatchEvent(new PopStateEvent("popstate"));
   expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+test("toggling «Умер» submits deceased: true", async () => {
+  const onSubmit = vi.fn();
+  render(
+    <CharacterModal
+      open mode="edit" others={[]}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
+    />,
+  );
+  await userEvent.click(screen.getByLabelText(/умер/i));
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+  expect(onSubmit).toHaveBeenCalledWith(
+    expect.objectContaining({ deceased: true }),
+    { kind: "none" },
+  );
+});
+
+test("defaults deceased to false when the box is left unchecked", async () => {
+  const onSubmit = vi.fn();
+  render(
+    <CharacterModal
+      open mode="edit" others={[]}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
+  expect(onSubmit).toHaveBeenCalledWith(
+    expect.objectContaining({ deceased: false }),
+    { kind: "none" },
+  );
 });
