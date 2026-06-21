@@ -11,7 +11,7 @@ export interface Character {
   bookId: string;
   gender: Gender;
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   middleName?: string | null;
   age?: number | null;
   posX?: number | null;

@@ -33,7 +33,7 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
 
   const nameOf = (id: string) => {
     const c = others.find((o) => o.id === id);
-    return c ? `${c.firstName} ${c.lastName}` : id;
+    return c ? `${c.firstName} ${c.lastName ?? ""}`.trim() : id;
   };
 
   const setColor = (entryIndex: number, targetId: string, color: string) =>
@@ -114,7 +114,7 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
                   )}
                 >
                   {others.map((o) => (
-                    <MenuItem key={o.id} value={o.id}>{o.firstName} {o.lastName}</MenuItem>
+                    <MenuItem key={o.id} value={o.id}>{`${o.firstName} ${o.lastName ?? ""}`.trim()}</MenuItem>
                   ))}
                 </Select>
               </FormControl>

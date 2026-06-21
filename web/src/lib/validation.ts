@@ -5,7 +5,7 @@ const name30 = z.string().trim().min(1, "Обязательное поле").max
 export const characterFormSchema = z.object({
   gender: z.enum(["male", "female"], { message: "Выберите пол" }),
   firstName: name30,
-  lastName: name30,
+  lastName: z.string().trim().max(30, "Максимум 30 символов").optional().or(z.literal("")),
   middleName: z.string().trim().max(30, "Максимум 30 символов").optional().or(z.literal("")),
   age: z
     .string()

@@ -101,7 +101,7 @@ export function CharacterModal({
     onSubmit({
       gender: gender as Gender,
       firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      lastName: lastName.trim() || null,
       middleName: middleName.trim() || null,
       age: age === "" ? null : Number(age),
       relations,
@@ -138,7 +138,7 @@ export function CharacterModal({
             <TextField label="Имя" value={firstName} inputProps={{ maxLength: 30 }} error={!!errors.firstName}
               helperText={errors.firstName ?? "До 30 символов"} onChange={(e) => setFirstName(e.target.value)} />
             <TextField label="Фамилия" value={lastName} inputProps={{ maxLength: 30 }} error={!!errors.lastName}
-              helperText={errors.lastName ?? "До 30 символов"} onChange={(e) => setLastName(e.target.value)} />
+              helperText={errors.lastName ?? "Необязательно, до 30 символов"} onChange={(e) => setLastName(e.target.value)} />
             <TextField label="Отчество" value={middleName} inputProps={{ maxLength: 30 }} error={!!errors.middleName}
               helperText={errors.middleName ?? "Необязательно, до 30 символов"} onChange={(e) => setMiddleName(e.target.value)} />
             <TextField label="Возраст" value={age} error={!!errors.age}

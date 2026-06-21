@@ -33,7 +33,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
 export interface CharacterInput {
   gender: "male" | "female";
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   middleName?: string | null;
   age?: number | null;
   relations: RelationEntry[];

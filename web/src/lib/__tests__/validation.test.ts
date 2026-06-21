@@ -7,9 +7,9 @@ test("accepts a valid form", () => {
   expect(characterFormSchema.safeParse(valid).success).toBe(true);
 });
 
-test("requires first and last name", () => {
+test("requires first name, allows empty last name", () => {
   expect(characterFormSchema.safeParse({ ...valid, firstName: "" }).success).toBe(false);
-  expect(characterFormSchema.safeParse({ ...valid, lastName: "" }).success).toBe(false);
+  expect(characterFormSchema.safeParse({ ...valid, lastName: "" }).success).toBe(true);
 });
 
 test("caps names at 30 chars", () => {
