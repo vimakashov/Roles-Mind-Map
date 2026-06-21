@@ -81,3 +81,28 @@ test("a deceased node layers the overlay into its background-image", () => {
   expect(String(cy.getElementById("dead").style("background-image"))).toContain("deceased");
   expect(String(cy.getElementById("alive").style("background-image"))).not.toContain("deceased");
 });
+
+test("un-marking deceased clears the overlay via in-place sync (no id-set change)", () => {
+  const noop = vi.fn();
+  // Initial render: node "x" is deceased — overlay must be present.
+  const graphDeceased: BookGraph = {
+    nodes: [{ id: "x", bookId: "b1", gender: "male", firstName: "A", lastName: "X", deceased: true }],
+    edges: [],
+  };
+  const { rerender } = render(
+    <MindMap graph={graphDeceased} onNodeTap={noop} onNodeMoved={noop} />,
+  );
+  const cy = instances[0];
+  expect(String(cy.getElementById("x").style("background-image"))).toContain("deceased");
+
+  // Re-render with the same node id but deceased: false — id set unchanged, so
+  // only the in-place data-sync effect runs (no Cytoscape re-init).
+  const graphAlive: BookGraph = {
+    nodes: [{ id: "x", bookId: "b1", gender: "male", firstName: "A", lastName: "X", deceased: false }],
+    edges: [],
+  };
+  rerender(<MindMap graph={graphAlive} onNodeTap={noop} onNodeMoved={noop} />);
+
+  // The same cy instance must reflect the cleared overlay.
+  expect(String(cy.getElementById("x").style("background-image"))).not.toContain("deceased");
+});

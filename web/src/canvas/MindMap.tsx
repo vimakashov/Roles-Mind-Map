@@ -37,7 +37,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
           selector: "node",
           style: {
             "background-color": (ele: any) => GENDER_COLORS[ele.data("gender") as "male" | "female"],
-                        "background-image": (ele: any) =>
+            "background-image": (ele: any) =>
               ele.data("overlayUri")
                 ? [ele.data("avatarUri"), ele.data("overlayUri")]
                 : ele.data("avatarUri"),
