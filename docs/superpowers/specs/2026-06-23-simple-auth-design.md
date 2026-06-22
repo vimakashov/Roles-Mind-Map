@@ -45,11 +45,17 @@ Repurpose the existing `name` field as the login (nickname) and add a password h
 model User {
   id           String   @id @default(cuid())
   name         String   @unique   // nickname / login; case-insensitive uniqueness enforced in code
-  passwordHash String                // scrypt, stored as "<saltHex>:<hashHex>"
+  passwordHash String?               // scrypt, stored as "<saltHex>:<hashHex>"; nullable so `db push` can ADD COLUMN to the populated table (see below). Filled on boot for the seed; always set for real accounts.
   createdAt    DateTime @default(now())
   books        Book[]
 }
 ```
+
+`passwordHash` is **nullable on purpose**: SQLite cannot `ADD COLUMN ... NOT NULL` (no default)
+to a table that already has rows, and Prisma `db push --accept-data-loss` could otherwise rebuild
+and drop the existing user (cascading its books). A `null` hash means a not-yet-migrated/credential-less
+row that cannot log in; `ensureAdminUser` fills it immediately after the push. `register`/`login`
+always write/require a non-null hash.
 
 `Book.userId` and the rest of the schema are unchanged.
 
@@ -69,11 +75,11 @@ called from `server.ts` after `prisma db push` (same spot as today):
 
 ### `db push` interaction
 
-`passwordHash` is `NOT NULL` with no default. `ensureAdminUser` runs immediately after
-the push and sets it on the one pre-existing row before any request is served. The
-existing `--accept-data-loss` flag (required for the relationship unique constraint)
-already covers the push; adding `@unique` to `name` is fine because there is at most one
-existing user row.
+`passwordHash` is **nullable** (see schema note) so the push is a safe non-destructive
+`ADD COLUMN`. `ensureAdminUser` runs immediately after the push and fills it on the one
+pre-existing row before any request is served. The existing `--accept-data-loss` flag
+(required for the relationship unique constraint) already covers the push; adding `@unique`
+to `name` is fine because there is at most one existing user row (no duplicate to reject).
 
 ---
 
