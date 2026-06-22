@@ -8,7 +8,7 @@ Roles-Mind-Map — a simple mind map for book characters (per `README.md`). Apac
 
 ## Status
 
-Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, undirected single relationship per character pair (arrowless lines), per-edge relationship line colours, system Back button closes the top-most modal, PWA).
+Implementation is complete and runs via Docker (all phases committed; CRUD for books and characters, mind-map canvas, custom character avatars, undirected single relationship per character pair (arrowless lines), per-edge relationship line colours, per-character free-form comments, create-and-link a brand-new character from the relations flow, system Back button closes the top-most modal, PWA).
 
 ### Commands
 
