@@ -3,6 +3,10 @@ services:
     build: .
     ports:
       - "3000:3000"
+    environment:
+      # Optional: set a stable secret to survive container/volume rebuilds.
+      # If unset, the server generates one and persists it to /data/session-secret.
+      - SESSION_SECRET=${SESSION_SECRET:-}
     volumes:
       - rmm-data:/data
 volumes:

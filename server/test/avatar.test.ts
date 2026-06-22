@@ -1,15 +1,19 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { setupTestDb, resetData, makeApp } from "./helpers.js";
+import { setupTestDb, resetData, makeApp, signIn } from "./helpers.js";
 import type { FastifyInstance } from "fastify";
 
 let app: FastifyInstance;
+let cookie: string;
 beforeAll(async () => { setupTestDb(); app = await makeApp(); });
 afterAll(async () => { await app.close(); });
-beforeEach(() => resetData());
+beforeEach(async () => { await resetData(); cookie = await signIn(app); });
+
+const inject = (opts: Parameters<FastifyInstance["inject"]>[0]) =>
+  app.inject({ ...opts, headers: { ...(opts as { headers?: Record<string, string> }).headers, cookie } });
 
 async function makeCharacter() {
-  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "B" } })).json();
-  return (await app.inject({
+  const book = (await inject({ method: "POST", url: "/api/books", payload: { title: "B" } })).json();
+  return (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "B", relations: [] },
   })).json();
@@ -21,13 +25,13 @@ const validPayload = { data: TINY, mimeType: "image/webp", width: 512, height: 5
 
 test("PUT stores a baked avatar and returns 200", async () => {
   const c = await makeCharacter();
-  const res = await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const res = await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
   expect(res.statusCode).toBe(200);
 });
 
 test("PUT rejects non-webp mime with 400", async () => {
   const c = await makeCharacter();
-  const res = await app.inject({
+  const res = await inject({
     method: "PUT", url: `/api/characters/${c.id}/avatar`,
     payload: { ...validPayload, mimeType: "image/png" },
   });
@@ -36,7 +40,7 @@ test("PUT rejects non-webp mime with 400", async () => {
 
 test("PUT rejects oversized dimensions with 400", async () => {
   const c = await makeCharacter();
-  const res = await app.inject({
+  const res = await inject({
     method: "PUT", url: `/api/characters/${c.id}/avatar`,
     payload: { ...validPayload, width: 2000 },
   });
@@ -47,7 +51,7 @@ test("PUT rejects payload larger than the byte cap with 400", async () => {
   const c = await makeCharacter();
   // ~2.25 MB once base64-decoded, over the 2 MB cap.
   const big = "A".repeat(3_000_000);
-  const res = await app.inject({
+  const res = await inject({
     method: "PUT", url: `/api/characters/${c.id}/avatar`,
     payload: { ...validPayload, data: big },
   });
@@ -55,21 +59,21 @@ test("PUT rejects payload larger than the byte cap with 400", async () => {
 });
 
 test("PUT to a non-existent character returns 404", async () => {
-  const res = await app.inject({ method: "PUT", url: `/api/characters/nope/avatar`, payload: validPayload });
+  const res = await inject({ method: "PUT", url: `/api/characters/nope/avatar`, payload: validPayload });
   expect(res.statusCode).toBe(404);
 });
 
 test("PUT twice replaces the stored avatar (upsert)", async () => {
   const c = await makeCharacter();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
-  const res = await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const res = await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
   expect(res.statusCode).toBe(200);
 });
 
 test("GET returns the stored bytes with the right content-type", async () => {
   const c = await makeCharacter();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
-  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const res = await inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
   expect(res.statusCode).toBe(200);
   expect(res.headers["content-type"]).toContain("image/webp");
   expect(Buffer.from(res.rawPayload).equals(Buffer.from([1, 2, 3, 4]))).toBe(true);
@@ -77,54 +81,54 @@ test("GET returns the stored bytes with the right content-type", async () => {
 
 test("GET returns 404 when the character has no avatar", async () => {
   const c = await makeCharacter();
-  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  const res = await inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
   expect(res.statusCode).toBe(404);
 });
 
 test("DELETE removes the avatar and a subsequent GET is 404", async () => {
   const c = await makeCharacter();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
-  const del = await app.inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  const del = await inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
   expect(del.statusCode).toBe(204);
-  const res = await app.inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
+  const res = await inject({ method: "GET", url: `/api/characters/${c.id}/avatar` });
   expect(res.statusCode).toBe(404);
 });
 
 test("DELETE is a no-op 204 when there is no avatar", async () => {
   const c = await makeCharacter();
-  const del = await app.inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
+  const del = await inject({ method: "DELETE", url: `/api/characters/${c.id}/avatar` });
   expect(del.statusCode).toBe(204);
 });
 
 test("deleting a character deletes its avatar row", async () => {
   const c = await makeCharacter();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
-  await app.inject({ method: "DELETE", url: `/api/characters/${c.id}` });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await inject({ method: "DELETE", url: `/api/characters/${c.id}` });
   const { prisma } = await import("../src/db.js");
   expect(await prisma.characterAvatar.count()).toBe(0);
 });
 
 test("deleting a book deletes its characters' avatars", async () => {
-  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "B2" } })).json();
-  const c = (await app.inject({
+  const book = (await inject({ method: "POST", url: "/api/books", payload: { title: "B2" } })).json();
+  const c = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "female", firstName: "C", lastName: "D", relations: [] },
   })).json();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
-  await app.inject({ method: "DELETE", url: `/api/books/${book.id}` });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await inject({ method: "DELETE", url: `/api/books/${book.id}` });
   const { prisma } = await import("../src/db.js");
   expect(await prisma.characterAvatar.count()).toBe(0);
 });
 
 test("graph node carries avatarUpdatedAt and no avatar bytes", async () => {
-  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "G" } })).json();
-  const c = (await app.inject({
+  const book = (await inject({ method: "POST", url: "/api/books", payload: { title: "G" } })).json();
+  const c = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "E", lastName: "F", relations: [] },
   })).json();
-  await app.inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
+  await inject({ method: "PUT", url: `/api/characters/${c.id}/avatar`, payload: validPayload });
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   const node = graph.nodes.find((n: { id: string }) => n.id === c.id);
   expect(node.avatarUpdatedAt).toBeTruthy();
   expect(node).not.toHaveProperty("avatar");
@@ -132,11 +136,11 @@ test("graph node carries avatarUpdatedAt and no avatar bytes", async () => {
 });
 
 test("graph node avatarUpdatedAt is null when there is no avatar", async () => {
-  const book = (await app.inject({ method: "POST", url: "/api/books", payload: { title: "G2" } })).json();
-  await app.inject({
+  const book = (await inject({ method: "POST", url: "/api/books", payload: { title: "G2" } })).json();
+  await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "N", lastName: "O", relations: [] },
   });
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0].avatarUpdatedAt).toBeNull();
 });

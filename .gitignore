@@ -12,3 +12,7 @@ test-results/
 
 *.tsbuildinfo
 .serena/
+
+# Generated cookie-signing secret (dev: next to dev.db)
+server/session-secret
+session-secret

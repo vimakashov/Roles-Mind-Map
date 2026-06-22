@@ -15,3 +15,16 @@ export const characterFormSchema = z.object({
 });
 
 export type CharacterForm = z.infer<typeof characterFormSchema>;
+
+export const nicknameField = z
+  .string()
+  .trim()
+  .min(3, "Минимум 3 символа")
+  .max(20, "Максимум 20 символов")
+  .regex(/^[A-Za-zА-Яа-яЁё0-9]+$/, "Только буквы и цифры");
+
+export const passwordField = z
+  .string()
+  .min(3, "Минимум 3 символа")
+  .max(30, "Максимум 30 символов")
+  .regex(/^[\x21-\x7E]+$/, "Недопустимые символы");

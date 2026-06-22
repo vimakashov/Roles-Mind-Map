@@ -8,10 +8,11 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  books     Book[]
+  id           String   @id @default(cuid())
+  name         String   @unique
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  books        Book[]
 }
 
 model Book {

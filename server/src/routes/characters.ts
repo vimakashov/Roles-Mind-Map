@@ -3,11 +3,13 @@ import { prisma } from "../db.js";
 import { reconcileRelationships } from "../services/relationships.js";
 import { reconcileComments } from "../services/comments.js";
 import { characterCreateSchema, characterUpdateSchema, positionSchema, avatarUploadSchema, AVATAR_MAX_BYTES } from "../schemas.js";
+import { bookOwnedBy, characterBookOwnedBy } from "../ownership.js";
 
 export async function characterRoutes(app: FastifyInstance) {
   app.post("/api/characters", async (req, reply) => {
     const parsed = characterCreateSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    if (!(await bookOwnedBy(req.user!.id, parsed.data.bookId))) return reply.code(404).send({ error: "not found" });
     const { bookId, relations, comments, ...fields } = parsed.data;
     const character = await prisma.$transaction(async (tx) => {
       const c = await tx.character.create({ data: { bookId, ...fields } });
@@ -19,6 +21,7 @@ export async function characterRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/api/characters/:id", async (req, reply) => {
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
     const parsed = characterUpdateSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const { relations, comments, ...fields } = parsed.data;
@@ -32,6 +35,7 @@ export async function characterRoutes(app: FastifyInstance) {
   });
 
   app.patch<{ Params: { id: string } }>("/api/characters/:id/pos", async (req, reply) => {
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
     const parsed = positionSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     return prisma.character.update({ where: { id: req.params.id }, data: parsed.data });
@@ -42,9 +46,7 @@ export async function characterRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const buf = Buffer.from(parsed.data.data, "base64");
     if (buf.byteLength > AVATAR_MAX_BYTES) return reply.code(400).send({ error: "avatar too large" });
-
-    const character = await prisma.character.findUnique({ where: { id: req.params.id } });
-    if (!character) return reply.code(404).send({ error: "not found" });
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
 
     // mimeType is client-declared; the image is validated and baked client-side before upload
     const { width, height, mimeType } = parsed.data;
@@ -57,6 +59,7 @@ export async function characterRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Params: { id: string } }>("/api/characters/:id/avatar", async (req, reply) => {
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
     const avatar = await prisma.characterAvatar.findUnique({ where: { characterId: req.params.id } });
     if (!avatar) return reply.code(404).send({ error: "not found" });
     return reply
@@ -66,11 +69,13 @@ export async function characterRoutes(app: FastifyInstance) {
   });
 
   app.delete<{ Params: { id: string } }>("/api/characters/:id/avatar", async (req, reply) => {
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
     await prisma.characterAvatar.deleteMany({ where: { characterId: req.params.id } });
     return reply.code(204).send();
   });
 
   app.delete<{ Params: { id: string } }>("/api/characters/:id", async (req, reply) => {
+    if (!(await characterBookOwnedBy(req.user!.id, req.params.id))) return reply.code(404).send({ error: "not found" });
     await prisma.character.delete({ where: { id: req.params.id } });
     return reply.code(204).send();
   });

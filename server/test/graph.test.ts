@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, expect, test } from "vitest";
 import { setupTestDb, resetData, prisma } from "./helpers.js";
 import { getBookGraph } from "../src/services/graph.js";
-import { DEFAULT_USER_ID } from "../src/defaultUser.js";
+import { DEFAULT_USER_ID } from "../src/adminUser.js";
 
 beforeAll(() => setupTestDb());
 beforeEach(() => resetData());

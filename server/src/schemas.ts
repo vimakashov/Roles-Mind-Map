@@ -8,6 +8,22 @@ export const bookUpdateSchema = z.object({ title: title60 });
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+export const nicknameSchema = z
+  .string()
+  .trim()
+  .min(3, "Минимум 3 символа")
+  .max(20, "Максимум 20 символов")
+  .regex(/^[A-Za-zА-Яа-яЁё0-9]+$/, "Только буквы и цифры");
+
+export const passwordSchema = z
+  .string()
+  .min(3, "Минимум 3 символа")
+  .max(30, "Максимум 30 символов")
+  .regex(/^[\x21-\x7E]+$/, "Недопустимые символы");
+
+export const registerSchema = z.object({ nickname: nicknameSchema, password: passwordSchema });
+export const loginSchema = z.object({ nickname: nicknameSchema, password: passwordSchema });
+
 export const relationConnectionSchema = z.object({
   otherId: z.string().min(1),
   role: z.string().trim().max(30).optional().default(""),
