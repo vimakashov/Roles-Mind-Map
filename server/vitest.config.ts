@@ -9,6 +9,9 @@ export default defineConfig({
     // same throwaway database. Set here (not via .env) so it wins over
     // server/.env, which PrismaClient would otherwise load (pointing tests at
     // dev.db). Without this, a fresh clone with no dev.db fails `npm test`.
-    env: { DATABASE_URL: "file:./test.db" },
+    env: {
+      DATABASE_URL: "file:./test.db",
+      SESSION_SECRET: "test-secret-do-not-use-in-prod",
+    },
   },
 });
