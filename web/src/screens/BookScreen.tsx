@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Snackbar, TextField, Typography } from "@mui/material";
 import { api, type CharacterInput } from "../api/client.js";
 import { RelationEditModal } from "../components/RelationEditModal.js";
 import type { BookGraph, Character, Relationship } from "../types.js";
@@ -22,6 +22,7 @@ export function BookScreen() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
   const [editEdge, setEditEdge] = useState<Relationship | null>(null);
+  const [copied, setCopied] = useState(false);
   useBackClose(deleteBookOpen, () => setDeleteBookOpen(false));
   useBackClose(renameOpen, () => setRenameOpen(false));
 
@@ -90,6 +91,16 @@ export function BookScreen() {
     await refresh();
   };
 
+  const share = async () => {
+    const url = `${window.location.origin}/share/${bookId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      // Clipboard unavailable (e.g. insecure context) — silently ignore.
+    }
+  };
+
   const empty = loaded && graph.nodes.length === 0;
 
   return (
@@ -97,6 +108,7 @@ export function BookScreen() {
       <TopBar
         title={graph.title}
         onBack={() => navigate("/")}
+        onShare={() => void share()}
         onEdit={() => { setRenameTitle(graph.title ?? ""); setRenameOpen(true); }}
         onDelete={() => setDeleteBookOpen(true)}
       />
@@ -177,6 +189,13 @@ export function BookScreen() {
           <Button variant="contained" onClick={() => void renameBook()}>Сохранить</Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={copied}
+        autoHideDuration={2500}
+        onClose={() => setCopied(false)}
+        message="Ссылка скопирована"
+      />
     </Box>
   );
 }

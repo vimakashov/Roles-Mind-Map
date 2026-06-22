@@ -2,15 +2,17 @@ import { AppBar, Toolbar, Typography, IconButton, Box } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import ShareIcon from "@mui/icons-material/Share";
 
 interface Props {
   title?: string;
   onBack?: () => void;
+  onShare?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export function TopBar({ title, onBack, onEdit, onDelete }: Props) {
+export function TopBar({ title, onBack, onShare, onEdit, onDelete }: Props) {
   return (
     <AppBar position="sticky" color="primary" sx={{ pt: "env(safe-area-inset-top)" }}>
       <Toolbar>
@@ -28,7 +30,12 @@ export function TopBar({ title, onBack, onEdit, onDelete }: Props) {
         >
           {title || "Roles Mind Map"}
         </Typography>
-        <Box sx={{ width: 96, textAlign: "right" }}>
+        <Box sx={{ minWidth: 96, display: "flex", justifyContent: "flex-end" }}>
+          {onShare && (
+            <IconButton color="inherit" aria-label="поделиться" onClick={onShare}>
+              <ShareIcon />
+            </IconButton>
+          )}
           {onEdit && (
             <IconButton color="inherit" aria-label="переименовать книгу" onClick={onEdit}>
               <EditIcon />
