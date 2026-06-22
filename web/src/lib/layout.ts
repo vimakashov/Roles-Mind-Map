@@ -30,3 +30,24 @@ export function edgeScaleForDegree(degree: number): number {
 export function edgeLengthForScales(scaleA: number, scaleB: number): number {
   return (BASE_EDGE_LENGTH * SPACING_FACTOR * (scaleA + scaleB)) / 2;
 }
+
+// Extra clearance (px) added on top of both endpoints' node sizes so a big
+// hub's avatar+label sits clear of its neighbours. cola's overlap avoidance
+// (with nodeDimensionsIncludeLabels) is the hard no-overlap guarantee; this
+// floor gives big nodes breathing room so they read as centred hubs.
+export const EDGE_CLEARANCE = 120;
+
+// Preferred cola edge length for an edge between two nodes. Small nodes keep
+// the gentle edge-scale length; once a node grows, the geometric floor
+// (both node sizes + clearance) takes over so its links stretch enough that
+// neither its avatar nor its name overlaps the node at the other end.
+export function edgeLengthForNodes(
+  nodeScaleA: number,
+  nodeScaleB: number,
+  edgeScaleA: number,
+  edgeScaleB: number,
+): number {
+  const gentle = edgeLengthForScales(edgeScaleA, edgeScaleB);
+  const geometric = BASE_NODE_SIZE * (nodeScaleA + nodeScaleB) + EDGE_CLEARANCE;
+  return Math.max(gentle, geometric);
+}
