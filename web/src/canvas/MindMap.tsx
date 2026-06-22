@@ -6,12 +6,11 @@ import { toElements } from "../lib/graphAdapter.js";
 import { GENDER_COLORS, EDGE_COLOR } from "../theme.js";
 import {
   SPACING_FACTOR,
-  BASE_EDGE_LENGTH,
   BASE_NODE_SPACING,
   POSITION_SCALE,
   BASE_NODE_SIZE,
   BASE_FONT_SIZE,
-  edgeLengthForScales,
+  edgeLengthForNodes,
 } from "../lib/layout.js";
 
 cytoscape.use(cola);
@@ -93,8 +92,17 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
         animate: true,
         infinite: true,
         fit: false,
+        // Count each node's avatar AND label box when avoiding overlap, so a
+        // big character's scaled name can't sprawl over its neighbours.
+        nodeDimensionsIncludeLabels: true,
+        avoidOverlap: true,
         edgeLength: (edge: any) =>
-          edgeLengthForScales(edge.source().data("edgeScale"), edge.target().data("edgeScale")),
+          edgeLengthForNodes(
+            edge.source().data("scale"),
+            edge.target().data("scale"),
+            edge.source().data("edgeScale"),
+            edge.target().data("edgeScale"),
+          ),
         nodeSpacing: BASE_NODE_SPACING * SPACING_FACTOR,
       } as any,
     });
