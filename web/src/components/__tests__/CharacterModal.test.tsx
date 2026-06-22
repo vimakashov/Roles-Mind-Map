@@ -114,6 +114,36 @@ test("defaults deceased to false when the box is left unchecked", async () => {
   );
 });
 
+test("«Новый персонаж» in relations validates A and calls onCreateLinked with staged input", async () => {
+  const onCreateLinked = vi.fn();
+  render(
+    <CharacterModal
+      open mode="edit"
+      others={[{ id: "p", bookId: "b", gender: "male", firstName: "Петя", lastName: "П" }]}
+      initial={{ gender: "female", firstName: "Аня", lastName: "С", deceased: false, relations: [], comments: [] }}
+      onCancel={() => {}} onSubmit={() => {}} onCreateLinked={onCreateLinked} onDelete={() => {}}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /связи/i }));
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  await userEvent.click(screen.getByRole("button", { name: /новый персонаж/i }));
+  expect(onCreateLinked).toHaveBeenCalledWith(
+    expect.objectContaining({ firstName: "Аня", relations: [] }),
+    { kind: "none" },
+  );
+});
+
+test("presetRelations seeds the staged relation count on a fresh create form", () => {
+  render(
+    <CharacterModal
+      open mode="create" others={[{ id: "a1", bookId: "b", gender: "male", firstName: "Аня", lastName: "С" }]}
+      presetRelations={[{ otherId: "a1", role: "", color: null }]}
+      onCancel={() => {}} onSubmit={() => {}}
+    />,
+  );
+  expect(screen.getByRole("button", { name: /связи \(1\)/i })).toBeInTheDocument();
+});
+
 test("shows the staged comment count on the Комментарии button", () => {
   render(
     <CharacterModal

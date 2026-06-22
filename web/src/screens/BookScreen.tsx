@@ -16,7 +16,7 @@ export function BookScreen() {
   const navigate = useNavigate();
   const [graph, setGraph] = useState<BookGraph>({ title: "", nodes: [], edges: [] });
   const [loaded, setLoaded] = useState(false);
-  const [modal, setModal] = useState<{ mode: "create" | "edit"; character?: Character } | null>(null);
+  const [modal, setModal] = useState<{ mode: "create" | "edit"; character?: Character; linkedTo?: string } | null>(null);
   const [deleteBookOpen, setDeleteBookOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
@@ -42,7 +42,7 @@ export function BookScreen() {
     comments: modal.character.comments ?? [],
   };
 
-  const submit = async (input: CharacterInput, avatar: AvatarChange) => {
+  const saveCharacter = async (input: CharacterInput, avatar: AvatarChange) => {
     const saved = modal?.mode === "edit" && modal.character
       ? await api.updateCharacter(modal.character.id, input)
       : await api.createCharacter(bookId!, input);
@@ -52,8 +52,21 @@ export function BookScreen() {
     } catch (e) {
       console.error("avatar update failed", e);
     }
+    return saved;
+  };
+
+  const submit = async (input: CharacterInput, avatar: AvatarChange) => {
+    await saveCharacter(input, avatar);
     setModal(null);
     await refresh();
+  };
+
+  // «Новый персонаж»: save A now, refresh so A is selectable, then open a fresh
+  // create form pre-linked to A. B's own save creates the A↔B edge via reconcile.
+  const submitAndCreateLinked = async (input: CharacterInput, avatar: AvatarChange) => {
+    const saved = await saveCharacter(input, avatar);
+    await refresh();
+    setModal({ mode: "create", linkedTo: saved.id });
   };
 
   const remove = async () => {
@@ -108,14 +121,17 @@ export function BookScreen() {
 
       {modal && (
         <CharacterModal
+          key={`${modal.mode}:${modal.character?.id ?? modal.linkedTo ?? "new"}`}
           open
           mode={modal.mode}
           others={others}
           characterId={modal.character?.id}
           avatarUpdatedAt={modal.character?.avatarUpdatedAt}
           initial={initial}
+          presetRelations={modal.linkedTo ? [{ otherId: modal.linkedTo, role: "", color: null }] : undefined}
           onCancel={() => setModal(null)}
           onSubmit={submit}
+          onCreateLinked={submitAndCreateLinked}
           onDelete={modal.mode === "edit" ? remove : undefined}
         />
       )}

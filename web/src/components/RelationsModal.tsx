@@ -6,6 +6,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Wheel, ShadeSlider, hexToHsva, hsvaToHex } from "@uiw/react-color";
+import { LinkChoiceDialog } from "./LinkChoiceDialog.js";
 import type { Character, RelationConnection } from "../types.js";
 import { EDGE_COLOR } from "../theme.js";
 
@@ -17,21 +18,24 @@ interface Props {
   value: RelationConnection[];
   onCancel: () => void;
   onSave: (connections: RelationConnection[]) => void;
+  onCreateNew?: (rows: RelationConnection[]) => void;
 }
 
 interface Picker { otherId: string; anchor: HTMLElement }
 
-export function RelationsModal({ open, others, value, onCancel, onSave }: Props) {
+export function RelationsModal({ open, others, value, onCancel, onSave, onCreateNew }: Props) {
   const [rows, setRows] = useState<RelationConnection[]>(value);
   const [picker, setPicker] = useState<Picker | null>(null);
   const [draft, setDraft] = useState(EDGE_COLOR);
   const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
+  const [choiceOpen, setChoiceOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => { if (open) setRows(value); }, [open]);
 
   useBackClose(open, onCancel);
   useBackClose(!!picker, () => setPicker(null));
-  useBackClose(!!addAnchor, () => setAddAnchor(null));
+  useBackClose(menuOpen, () => { setMenuOpen(false); setAddAnchor(null); });
 
   const nameOf = (id: string) => {
     const c = others.find((o) => o.id === id);
@@ -43,6 +47,7 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
 
   const addConnection = (otherId: string) => {
     setRows((rs) => [...rs, { otherId, role: "", color: null }]);
+    setMenuOpen(false);
     setAddAnchor(null);
   };
   const removeRow = (otherId: string) => setRows((rs) => rs.filter((r) => r.otherId !== otherId));
@@ -108,20 +113,17 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
             </Box>
           ))}
         </Stack>
-        {available.length > 0 && (
-          <>
-            <Button sx={{ mt: 2 }} onClick={(e) => setAddAnchor(e.currentTarget)}>
-              + Добавить связь
-            </Button>
-            <Menu anchorEl={addAnchor} open={!!addAnchor} onClose={() => setAddAnchor(null)}>
-              {available.map((o) => (
-                <MenuItem key={o.id} onClick={() => addConnection(o.id)}>
-                  {`${o.firstName} ${o.lastName ?? ""}`.trim()}
-                </MenuItem>
-              ))}
-            </Menu>
-          </>
-        )}
+        <Button sx={{ mt: 2 }} onClick={(e) => { setAddAnchor(e.currentTarget); setChoiceOpen(true); }}>
+          + Добавить связь
+        </Button>
+        <Menu anchorEl={addAnchor} open={menuOpen}
+          onClose={() => { setMenuOpen(false); setAddAnchor(null); }}>
+          {available.map((o) => (
+            <MenuItem key={o.id} onClick={() => addConnection(o.id)}>
+              {`${o.firstName} ${o.lastName ?? ""}`.trim()}
+            </MenuItem>
+          ))}
+        </Menu>
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Отмена</Button>
@@ -137,6 +139,13 @@ export function RelationsModal({ open, others, value, onCancel, onSave }: Props)
           </Paper>
         </ClickAwayListener>
       </Popper>
+      <LinkChoiceDialog
+        open={choiceOpen}
+        canUseExisting={available.length > 0}
+        onExisting={() => { setChoiceOpen(false); setMenuOpen(true); }}
+        onCreateNew={() => { setChoiceOpen(false); setAddAnchor(null); onCreateNew?.(rows); }}
+        onCancel={() => { setChoiceOpen(false); setAddAnchor(null); }}
+      />
     </Dialog>
   );
 }
