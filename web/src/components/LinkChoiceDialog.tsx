@@ -12,7 +12,7 @@ interface Props {
 export function LinkChoiceDialog({ open, canUseExisting, onExisting, onCreateNew, onCancel }: Props) {
   useBackClose(open, onCancel);
   return (
-    <Dialog open={open} onClose={onCancel} maxWidth="xs">
+    <Dialog open={open} onClose={onCancel} maxWidth="xs" transitionDuration={0}>
       <DialogTitle>Создать нового персонажа или связать с существующим?</DialogTitle>
       <DialogContent />
       <DialogActions>

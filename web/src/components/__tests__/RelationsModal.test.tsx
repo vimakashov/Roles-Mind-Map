@@ -23,6 +23,7 @@ test("adds a connection via the menu and returns it on save", async () => {
   const onSave = vi.fn();
   render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />);
   await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  await userEvent.click(screen.getByRole("button", { name: /^существующий$/i }));
   await userEvent.click(screen.getByRole("menuitem", { name: /жанна/i }));
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
   expect(onSave).toHaveBeenCalledWith([{ otherId: "z", role: "", color: null }]);
@@ -34,6 +35,7 @@ test("hides already-connected characters from the add menu", async () => {
       onCancel={() => {}} onSave={() => {}} />,
   );
   await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  await userEvent.click(screen.getByRole("button", { name: /^существующий$/i }));
   expect(screen.queryByRole("menuitem", { name: /петя/i })).not.toBeInTheDocument();
   expect(screen.getByRole("menuitem", { name: /жанна/i })).toBeInTheDocument();
 });
@@ -91,4 +93,25 @@ test("Back button cancels the relations modal", async () => {
   await new Promise<void>((r) => queueMicrotask(() => r()));
   window.dispatchEvent(new PopStateEvent("popstate"));
   expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+test("«Новый персонаж» returns the current staged rows", async () => {
+  const onCreateNew = vi.fn();
+  render(
+    <RelationsModal open others={others} value={[{ otherId: "p", role: "друзья", color: null }]}
+      onCancel={() => {}} onSave={() => {}} onCreateNew={onCreateNew} />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  await userEvent.click(screen.getByRole("button", { name: /новый персонаж/i }));
+  expect(onCreateNew).toHaveBeenCalledWith([{ otherId: "p", role: "друзья", color: null }]);
+});
+
+test("the add button shows and «Существующий» is disabled when everyone is already connected", async () => {
+  render(
+    <RelationsModal open others={others}
+      value={[{ otherId: "p", role: "", color: null }, { otherId: "z", role: "", color: null }]}
+      onCancel={() => {}} onSave={() => {}} onCreateNew={() => {}} />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
+  expect(screen.getByRole("button", { name: /^существующий$/i })).toBeDisabled();
 });
