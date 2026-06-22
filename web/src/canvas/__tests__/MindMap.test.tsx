@@ -106,3 +106,18 @@ test("un-marking deceased clears the overlay via in-place sync (no id-set change
   // The same cy instance must reflect the cleared overlay.
   expect(String(cy.getElementById("x").style("background-image"))).not.toContain("deceased");
 });
+
+test("tapping an edge calls onEdgeTap with the edge id", () => {
+  const edgeTap = vi.fn();
+  const graph: BookGraph = {
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" },
+      { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" },
+    ],
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "друзья", color: null }],
+  };
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} onEdgeTap={edgeTap} />);
+  const cy = instances[0];
+  cy.getElementById("e1").emit("tap");
+  expect(edgeTap).toHaveBeenCalledWith("e1");
+});

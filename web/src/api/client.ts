@@ -1,4 +1,4 @@
-import type { Book, BookGraph, Character, CommentItem, RelationConnection } from "../types.js";
+import type { Book, BookGraph, Character, CommentItem, Relationship, RelationConnection } from "../types.js";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   // Only declare a JSON content-type when we actually send a body. Setting it on
@@ -67,6 +67,13 @@ export const api = {
     }),
   deleteCharacter: (id: string) =>
     req<void>(`/api/characters/${id}`, { method: "DELETE" }),
+  updateRelation: (id: string, input: { role: string; color: string | null }) =>
+    req<Relationship>(`/api/relationships/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteRelation: (id: string) =>
+    req<void>(`/api/relationships/${id}`, { method: "DELETE" }),
   avatarUrl: (id: string, version: string) =>
     `/api/characters/${id}/avatar?v=${encodeURIComponent(version)}`,
   // Callers pass a baked 512x512 WebP blob; the server enforces image/webp (z.literal) and the 512 dims.

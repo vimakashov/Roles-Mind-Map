@@ -12,9 +12,10 @@ interface Props {
   graph: BookGraph;
   onNodeTap: (id: string) => void;
   onNodeMoved: (id: string, x: number, y: number) => void;
+  onEdgeTap?: (id: string) => void;
 }
 
-export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
+export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
 
@@ -24,8 +25,10 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
   // attribute-only edit). Route them through refs that always hold the latest.
   const onNodeTapRef = useRef(onNodeTap);
   const onNodeMovedRef = useRef(onNodeMoved);
+  const onEdgeTapRef = useRef(onEdgeTap);
   onNodeTapRef.current = onNodeTap;
   onNodeMovedRef.current = onNodeMoved;
+  onEdgeTapRef.current = onEdgeTap;
 
   useEffect(() => {
     if (!ref.current) return;
@@ -89,6 +92,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved }: Props) {
     cyRef.current = cy;
 
     cy.on("tap", "node", (evt) => onNodeTapRef.current(evt.target.id()));
+    cy.on("tap", "edge", (evt) => onEdgeTapRef.current?.(evt.target.id()));
     cy.on("dragfree", "node", (evt) => {
       const p = evt.target.position();
       // Persist in logical space (graphAdapter scales by POSITION_SCALE on load).

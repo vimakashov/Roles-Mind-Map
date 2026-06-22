@@ -14,6 +14,11 @@ export const relationConnectionSchema = z.object({
   color: hexColor.nullable(),
 });
 
+export const relationUpdateSchema = z.object({
+  role: z.string().trim().max(30).optional().default(""),
+  color: hexColor.nullable(),
+});
+
 export const commentInputSchema = z.object({
   id: z.string().min(1).nullable().optional().default(null),
   text: z.string().trim().min(1).max(2000),
@@ -40,6 +45,7 @@ export const positionSchema = z.object({
 
 export type CommentInput = z.infer<typeof commentInputSchema>;
 export type RelationConnection = z.infer<typeof relationConnectionSchema>;
+export type RelationUpdate = z.infer<typeof relationUpdateSchema>;
 export type CharacterCreate = z.infer<typeof characterCreateSchema>;
 export type CharacterUpdate = z.infer<typeof characterUpdateSchema>;
 

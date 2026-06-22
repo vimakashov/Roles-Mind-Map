@@ -276,3 +276,70 @@ test("deletes a character and cascades its comments", async () => {
   await app.inject({ method: "DELETE", url: `/api/characters/${c.id}` });
   expect(await prisma.comment.count()).toBe(0);
 });
+
+async function makeEdge(bookId: string) {
+  const a = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId, gender: "male", firstName: "A", lastName: "X", relations: [] },
+  })).json();
+  await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: { bookId, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] },
+  });
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${bookId}/graph` })).json();
+  return graph.edges[0];
+}
+
+test("updates a relationship's role and colour by id", async () => {
+  const book = await createBook();
+  const edge = await makeEdge(book.id);
+
+  const res = await app.inject({
+    method: "PATCH", url: `/api/relationships/${edge.id}`,
+    payload: { role: "враги", color: "#ff0000" },
+  });
+  expect(res.statusCode).toBe(200);
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.edges).toHaveLength(1);
+  expect(graph.edges[0].role).toBe("враги");
+  expect(graph.edges[0].color).toBe("#ff0000");
+});
+
+test("clears a relationship's colour to null and accepts an empty role", async () => {
+  const book = await createBook();
+  const edge = await makeEdge(book.id);
+  await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "друзья", color: "#123456" } });
+
+  const res = await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { color: null } });
+  expect(res.statusCode).toBe(200);
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.edges[0].role).toBe("");
+  expect(graph.edges[0].color).toBeNull();
+});
+
+test("rejects an invalid hex colour on relationship update", async () => {
+  const book = await createBook();
+  const edge = await makeEdge(book.id);
+  const res = await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "x", color: "red" } });
+  expect(res.statusCode).toBe(400);
+});
+
+test("deletes a relationship by id, leaving its characters", async () => {
+  const book = await createBook();
+  const edge = await makeEdge(book.id);
+  const del = await app.inject({ method: "DELETE", url: `/api/relationships/${edge.id}` });
+  expect(del.statusCode).toBe(204);
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  expect(graph.nodes).toHaveLength(2);
+  expect(graph.edges).toHaveLength(0);
+});
+
+test("returns 404 for a non-existent relationship on update and delete", async () => {
+  const patch = await app.inject({ method: "PATCH", url: "/api/relationships/nope", payload: { role: "x", color: null } });
+  expect(patch.statusCode).toBe(404);
+  const del = await app.inject({ method: "DELETE", url: "/api/relationships/nope" });
+  expect(del.statusCode).toBe(404);
+});
