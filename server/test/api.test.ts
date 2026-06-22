@@ -1,38 +1,42 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { setupTestDb, resetData, makeApp, prisma } from "./helpers.js";
+import { setupTestDb, resetData, makeApp, signIn, prisma } from "./helpers.js";
 import type { FastifyInstance } from "fastify";
 
 let app: FastifyInstance;
+let cookie: string;
 beforeAll(async () => { setupTestDb(); app = await makeApp(); });
 afterAll(async () => { await app.close(); });
-beforeEach(() => resetData());
+beforeEach(async () => { await resetData(); cookie = await signIn(app); });
+
+const inject = (opts: Parameters<FastifyInstance["inject"]>[0]) =>
+  app.inject({ ...opts, headers: { ...(opts as { headers?: Record<string, string> }).headers, cookie } });
 
 async function createBook(title = "War and Peace") {
-  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title } });
+  const res = await inject({ method: "POST", url: "/api/books", payload: { title } });
   expect(res.statusCode).toBe(201);
   return res.json();
 }
 
 test("creates and lists books", async () => {
   await createBook();
-  const res = await app.inject({ method: "GET", url: "/api/books" });
+  const res = await inject({ method: "GET", url: "/api/books" });
   expect(res.statusCode).toBe(200);
   expect(res.json()).toHaveLength(1);
 });
 
 test("rejects empty book title", async () => {
-  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title: "" } });
+  const res = await inject({ method: "POST", url: "/api/books", payload: { title: "" } });
   expect(res.statusCode).toBe(400);
 });
 
 test("creates character with relations and returns graph", async () => {
   const book = await createBook();
-  const petya = (await app.inject({
+  const petya = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "Petya", lastName: "P", relations: [] },
   })).json();
 
-  const vasyaRes = await app.inject({
+  const vasyaRes = await inject({
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V",
@@ -41,42 +45,42 @@ test("creates character with relations and returns graph", async () => {
   });
   expect(vasyaRes.statusCode).toBe(201);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes).toHaveLength(2);
   expect(graph.edges).toHaveLength(1);
 });
 
 test("creates a character with no lastName", async () => {
   const book = await createBook();
-  const res = await app.inject({
+  const res = await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "Платон", relations: [] },
   });
   expect(res.statusCode).toBe(201);
   expect(res.json().lastName).toBeNull();
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0]).toMatchObject({ firstName: "Платон", lastName: null });
 });
 
 test("updates character relations via reconciliation", async () => {
   const book = await createBook();
-  const t = (n: string) => app.inject({
+  const t = (n: string) => inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: n, lastName: "X", relations: [] },
   }).then((r) => r.json());
   const a = await t("A"); const b = await t("B");
-  const v = (await app.inject({
+  const v = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "V", lastName: "X", relations: [{ otherId: a.id, role: "друг", color: null }] },
   })).json();
 
-  await app.inject({
+  await inject({
     method: "PATCH", url: `/api/characters/${v.id}`,
     payload: { gender: "male", firstName: "V", lastName: "X", relations: [{ otherId: b.id, role: "друг", color: null }] },
   });
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges).toHaveLength(1);
   const e = graph.edges[0];
   expect([e.sourceId, e.targetId]).toContain(b.id);
@@ -85,78 +89,78 @@ test("updates character relations via reconciliation", async () => {
 
 test("a relation created from B is visible and editable from A", async () => {
   const book = await createBook();
-  const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  const b = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } })).json();
+  const a = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
+  const b = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } })).json();
 
   // edit from A's side
-  await app.inject({ method: "PATCH", url: `/api/characters/${a.id}`, payload: { gender: "male", firstName: "A", lastName: "X", relations: [{ otherId: b.id, role: "враги", color: null }] } });
+  await inject({ method: "PATCH", url: `/api/characters/${a.id}`, payload: { gender: "male", firstName: "A", lastName: "X", relations: [{ otherId: b.id, role: "враги", color: null }] } });
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges).toHaveLength(1);
   expect(graph.edges[0].role).toBe("враги");
 });
 
 test("does not create a duplicate edge for the reverse direction", async () => {
   const book = await createBook();
-  const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  const b = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } })).json();
+  const a = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
+  const b = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } })).json();
 
   // A re-asserts the same pair -> still one edge
-  await app.inject({ method: "PATCH", url: `/api/characters/${a.id}`, payload: { gender: "male", firstName: "A", lastName: "X", relations: [{ otherId: b.id, role: "друзья", color: null }] } });
+  await inject({ method: "PATCH", url: `/api/characters/${a.id}`, payload: { gender: "male", firstName: "A", lastName: "X", relations: [{ otherId: b.id, role: "друзья", color: null }] } });
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges).toHaveLength(1);
 });
 
 test("stores relationships canonically (sourceId < targetId)", async () => {
   const book = await createBook();
-  const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } });
+  const a = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
+  await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] } });
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges).toHaveLength(1);
   expect(graph.edges[0].sourceId < graph.edges[0].targetId).toBe(true);
 });
 
 test("deletes character and cascades its edges", async () => {
   const book = await createBook();
-  const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  const b = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "female", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "жена", color: null }] } })).json();
+  const a = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
+  const b = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "female", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "жена", color: null }] } })).json();
 
-  const del = await app.inject({ method: "DELETE", url: `/api/characters/${a.id}` });
+  const del = await inject({ method: "DELETE", url: `/api/characters/${a.id}` });
   expect(del.statusCode).toBe(204);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes).toHaveLength(1);
   expect(graph.edges).toHaveLength(0);
 });
 
 test("saves node position", async () => {
   const book = await createBook();
-  const a = (await app.inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
-  const res = await app.inject({ method: "PATCH", url: `/api/characters/${a.id}/pos`, payload: { posX: 12, posY: 34 } });
+  const a = (await inject({ method: "POST", url: "/api/characters", payload: { bookId: book.id, gender: "male", firstName: "A", lastName: "X", relations: [] } })).json();
+  const res = await inject({ method: "PATCH", url: `/api/characters/${a.id}/pos`, payload: { posX: 12, posY: 34 } });
   expect(res.statusCode).toBe(200);
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0]).toMatchObject({ posX: 12, posY: 34 });
 });
 
 test("accepts 60-char book title on create", async () => {
   const title60 = "A".repeat(60);
-  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title: title60 } });
+  const res = await inject({ method: "POST", url: "/api/books", payload: { title: title60 } });
   expect(res.statusCode).toBe(201);
   expect(res.json().title).toBe(title60);
 });
 
 test("rejects 61-char book title on create", async () => {
   const title61 = "A".repeat(61);
-  const res = await app.inject({ method: "POST", url: "/api/books", payload: { title: title61 } });
+  const res = await inject({ method: "POST", url: "/api/books", payload: { title: title61 } });
   expect(res.statusCode).toBe(400);
 });
 
 test("accepts 60-char book title on rename", async () => {
   const book = await createBook();
   const title60 = "B".repeat(60);
-  const res = await app.inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title60 } });
+  const res = await inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title60 } });
   expect(res.statusCode).toBe(200);
   expect(res.json().title).toBe(title60);
 });
@@ -164,44 +168,44 @@ test("accepts 60-char book title on rename", async () => {
 test("rejects 61-char book title on rename", async () => {
   const book = await createBook();
   const title61 = "B".repeat(61);
-  const res = await app.inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title61 } });
+  const res = await inject({ method: "PATCH", url: `/api/books/${book.id}`, payload: { title: title61 } });
   expect(res.statusCode).toBe(400);
 });
 
 test("returns 404 for non-existent ids on update and delete", async () => {
   const nonExistentId = 999999;
-  const patch = await app.inject({
+  const patch = await inject({
     method: "PATCH", url: `/api/books/${nonExistentId}`,
     payload: { title: "Ghost Book" },
   });
   expect(patch.statusCode).toBe(404);
 
-  const del = await app.inject({ method: "DELETE", url: `/api/characters/${nonExistentId}` });
+  const del = await inject({ method: "DELETE", url: `/api/characters/${nonExistentId}` });
   expect(del.statusCode).toBe(404);
 });
 
 test("persists the deceased flag on create and exposes it in the graph", async () => {
   const book = await createBook();
-  const res = await app.inject({
+  const res = await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "Boris", lastName: "B", deceased: true, relations: [] },
   });
   expect(res.statusCode).toBe(201);
   expect(res.json().deceased).toBe(true);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes[0].deceased).toBe(true);
 });
 
 test("defaults deceased to false when omitted and toggles via PATCH", async () => {
   const book = await createBook();
-  const c = (await app.inject({
+  const c = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId: book.id, gender: "male", firstName: "Ivan", lastName: "I", relations: [] },
   })).json();
   expect(c.deceased).toBe(false);
 
-  const patched = await app.inject({
+  const patched = await inject({
     method: "PATCH", url: `/api/characters/${c.id}`,
     payload: { gender: "male", firstName: "Ivan", lastName: "I", deceased: true, relations: [] },
   });
@@ -211,7 +215,7 @@ test("defaults deceased to false when omitted and toggles via PATCH", async () =
 
 test("creates a character with comments and returns them in the graph", async () => {
   const book = await createBook();
-  const res = await app.inject({
+  const res = await inject({
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
@@ -220,7 +224,7 @@ test("creates a character with comments and returns them in the graph", async ()
   });
   expect(res.statusCode).toBe(201);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   const texts = graph.nodes[0].comments.map((c: { text: string }) => c.text);
   expect(texts).toEqual(["born in Moscow", "loves chess"]);
   expect(typeof graph.nodes[0].comments[0].id).toBe("string");
@@ -228,7 +232,7 @@ test("creates a character with comments and returns them in the graph", async ()
 
 test("updates a comment and deletes another via PATCH reconciliation", async () => {
   const book = await createBook();
-  const created = (await app.inject({
+  const created = (await inject({
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
@@ -236,10 +240,10 @@ test("updates a comment and deletes another via PATCH reconciliation", async () 
     },
   })).json();
 
-  const graph1 = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph1 = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   const keep = graph1.nodes[0].comments.find((c: { text: string }) => c.text === "keep me");
 
-  await app.inject({
+  await inject({
     method: "PATCH", url: `/api/characters/${created.id}`,
     payload: {
       gender: "male", firstName: "Vasya", lastName: "V", relations: [],
@@ -247,14 +251,14 @@ test("updates a comment and deletes another via PATCH reconciliation", async () 
     },
   });
 
-  const graph2 = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph2 = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   const texts = graph2.nodes[0].comments.map((c: { text: string }) => c.text);
   expect(texts).toEqual(["kept and edited"]);
 });
 
 test("rejects a comment longer than 2000 chars", async () => {
   const book = await createBook();
-  const res = await app.inject({
+  const res = await inject({
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
@@ -266,27 +270,27 @@ test("rejects a comment longer than 2000 chars", async () => {
 
 test("deletes a character and cascades its comments", async () => {
   const book = await createBook();
-  const c = (await app.inject({
+  const c = (await inject({
     method: "POST", url: "/api/characters",
     payload: {
       bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
       comments: [{ id: null, text: "note" }],
     },
   })).json();
-  await app.inject({ method: "DELETE", url: `/api/characters/${c.id}` });
+  await inject({ method: "DELETE", url: `/api/characters/${c.id}` });
   expect(await prisma.comment.count()).toBe(0);
 });
 
 async function makeEdge(bookId: string) {
-  const a = (await app.inject({
+  const a = (await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId, gender: "male", firstName: "A", lastName: "X", relations: [] },
   })).json();
-  await app.inject({
+  await inject({
     method: "POST", url: "/api/characters",
     payload: { bookId, gender: "male", firstName: "B", lastName: "X", relations: [{ otherId: a.id, role: "друзья", color: null }] },
   });
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${bookId}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${bookId}/graph` })).json();
   return graph.edges[0];
 }
 
@@ -294,13 +298,13 @@ test("updates a relationship's role and colour by id", async () => {
   const book = await createBook();
   const edge = await makeEdge(book.id);
 
-  const res = await app.inject({
+  const res = await inject({
     method: "PATCH", url: `/api/relationships/${edge.id}`,
     payload: { role: "враги", color: "#ff0000" },
   });
   expect(res.statusCode).toBe(200);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges).toHaveLength(1);
   expect(graph.edges[0].role).toBe("враги");
   expect(graph.edges[0].color).toBe("#ff0000");
@@ -309,12 +313,12 @@ test("updates a relationship's role and colour by id", async () => {
 test("clears a relationship's colour to null and accepts an empty role", async () => {
   const book = await createBook();
   const edge = await makeEdge(book.id);
-  await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "друзья", color: "#123456" } });
+  await inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "друзья", color: "#123456" } });
 
-  const res = await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { color: null } });
+  const res = await inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { color: null } });
   expect(res.statusCode).toBe(200);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.edges[0].role).toBe("");
   expect(graph.edges[0].color).toBeNull();
 });
@@ -322,24 +326,24 @@ test("clears a relationship's colour to null and accepts an empty role", async (
 test("rejects an invalid hex colour on relationship update", async () => {
   const book = await createBook();
   const edge = await makeEdge(book.id);
-  const res = await app.inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "x", color: "red" } });
+  const res = await inject({ method: "PATCH", url: `/api/relationships/${edge.id}`, payload: { role: "x", color: "red" } });
   expect(res.statusCode).toBe(400);
 });
 
 test("deletes a relationship by id, leaving its characters", async () => {
   const book = await createBook();
   const edge = await makeEdge(book.id);
-  const del = await app.inject({ method: "DELETE", url: `/api/relationships/${edge.id}` });
+  const del = await inject({ method: "DELETE", url: `/api/relationships/${edge.id}` });
   expect(del.statusCode).toBe(204);
 
-  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const graph = (await inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
   expect(graph.nodes).toHaveLength(2);
   expect(graph.edges).toHaveLength(0);
 });
 
 test("returns 404 for a non-existent relationship on update and delete", async () => {
-  const patch = await app.inject({ method: "PATCH", url: "/api/relationships/nope", payload: { role: "x", color: null } });
+  const patch = await inject({ method: "PATCH", url: "/api/relationships/nope", payload: { role: "x", color: null } });
   expect(patch.statusCode).toBe(404);
-  const del = await app.inject({ method: "DELETE", url: "/api/relationships/nope" });
+  const del = await inject({ method: "DELETE", url: "/api/relationships/nope" });
   expect(del.statusCode).toBe(404);
 });
