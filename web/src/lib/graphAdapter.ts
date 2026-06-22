@@ -2,7 +2,7 @@ import type { BookGraph } from "../types.js";
 import { api } from "../api/client.js";
 import { avatarKey } from "./avatar.js";
 import { avatarSvgMarkup, deceasedOverlaySvg } from "./avatarSvg.js";
-import { POSITION_SCALE, scaleForDegree } from "./layout.js";
+import { POSITION_SCALE, scaleForDegree, edgeScaleForDegree } from "./layout.js";
 
 export interface CyElement {
   data: Record<string, unknown> & { id: string };
@@ -30,6 +30,7 @@ export function toElements(graph: BookGraph): CyElement[] {
           : null,
         gender: c.gender,
         scale: scaleForDegree(degree.get(c.id) ?? 0),
+        edgeScale: edgeScaleForDegree(degree.get(c.id) ?? 0),
       },
     };
     if (c.posX != null && c.posY != null)

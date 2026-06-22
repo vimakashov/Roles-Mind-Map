@@ -94,7 +94,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
         infinite: true,
         fit: false,
         edgeLength: (edge: any) =>
-          edgeLengthForScales(edge.source().data("scale"), edge.target().data("scale")),
+          edgeLengthForScales(edge.source().data("edgeScale"), edge.target().data("edgeScale")),
         nodeSpacing: BASE_NODE_SPACING * SPACING_FACTOR,
       } as any,
     });
