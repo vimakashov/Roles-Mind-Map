@@ -6,6 +6,7 @@ import { authRoutes } from "./routes/auth.js";
 import { bookRoutes } from "./routes/books.js";
 import { characterRoutes } from "./routes/characters.js";
 import { relationshipRoutes } from "./routes/relationships.js";
+import { shareRoutes } from "./routes/share.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -32,7 +33,8 @@ export function buildApp(): FastifyInstance {
     }
     const isApi = req.url.startsWith("/api/");
     const isAuth = req.url.startsWith("/api/auth/");
-    if (isApi && !isAuth && !req.user) {
+    const isShare = req.url.startsWith("/api/share/");
+    if (isApi && !isAuth && !isShare && !req.user) {
       return reply.code(401).send({ error: "unauthorized" });
     }
   });
@@ -41,6 +43,7 @@ export function buildApp(): FastifyInstance {
   app.register(bookRoutes);
   app.register(characterRoutes);
   app.register(relationshipRoutes);
+  app.register(shareRoutes);
   app.setErrorHandler((err, _req, reply) => {
     if ((err as { code?: string }).code === "P2025") {
       return reply.code(404).send({ error: "not found" });
