@@ -1,5 +1,10 @@
 export type Gender = "male" | "female";
 
+export interface AuthUser {
+  id: string;
+  name: string;
+}
+
 export interface Book {
   id: string;
   title: string;

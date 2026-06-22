@@ -1,4 +1,4 @@
-import type { Book, BookGraph, Character, CommentItem, Relationship, RelationConnection } from "../types.js";
+import type { AuthUser, Book, BookGraph, Character, CommentItem, Relationship, RelationConnection } from "../types.js";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   // Only declare a JSON content-type when we actually send a body. Setting it on
@@ -42,6 +42,11 @@ export interface CharacterInput {
 }
 
 export const api = {
+  register: (nickname: string, password: string) =>
+    req<AuthUser>("/api/auth/register", { method: "POST", body: JSON.stringify({ nickname, password }) }),
+  login: (nickname: string, password: string) =>
+    req<AuthUser>("/api/auth/login", { method: "POST", body: JSON.stringify({ nickname, password }) }),
+  me: () => req<AuthUser>("/api/auth/me"),
   listBooks: () => req<Book[]>("/api/books"),
   createBook: (title: string) =>
     req<Book>("/api/books", { method: "POST", body: JSON.stringify({ title }) }),
