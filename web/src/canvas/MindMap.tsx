@@ -27,9 +27,10 @@ interface Props {
   onNodeTap: (id: string) => void;
   onNodeMoved: (id: string, x: number, y: number) => void;
   onEdgeTap?: (id: string) => void;
+  avatarUrl?: (id: string, version: string) => string;
 }
 
-export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
+export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
 
@@ -48,7 +49,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
     if (!ref.current) return;
     const cy = cytoscape({
       container: ref.current,
-      elements: toElements(graph),
+      elements: toElements(graph, { avatarUrl }),
       style: [
         {
           selector: "node",
@@ -167,7 +168,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
     const cy = cyRef.current;
     if (!cy) return;
     cy.batch(() => {
-      for (const el of toElements(graph)) {
+      for (const el of toElements(graph, { avatarUrl })) {
         const target = cy.getElementById(el.data.id);
         if (target.empty()) continue;
         // id is unchanged; source/target are immutable on existing edges.

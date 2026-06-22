@@ -9,7 +9,12 @@ export interface CyElement {
   position?: { x: number; y: number };
 }
 
-export function toElements(graph: BookGraph): CyElement[] {
+export interface ToElementsOptions {
+  avatarUrl?: (id: string, version: string) => string;
+}
+
+export function toElements(graph: BookGraph, opts: ToElementsOptions = {}): CyElement[] {
+  const avatarUrl = opts.avatarUrl ?? api.avatarUrl;
   const degree = new Map<string, number>();
   for (const e of graph.edges) {
     degree.set(e.sourceId, (degree.get(e.sourceId) ?? 0) + 1);
@@ -23,7 +28,7 @@ export function toElements(graph: BookGraph): CyElement[] {
         label: [c.firstName, c.lastName].filter(Boolean).join("\n"),
         avatar: avatarKey(c.gender, c.age),
         avatarUri: c.avatarUpdatedAt
-          ? api.avatarUrl(c.id, c.avatarUpdatedAt)
+          ? avatarUrl(c.id, c.avatarUpdatedAt)
           : "data:image/svg+xml," + encodeURIComponent(avatarSvgMarkup(c.gender, c.age, { sized: true })),
         overlayUri: c.deceased
           ? "data:image/svg+xml," + encodeURIComponent(deceasedOverlaySvg({ sized: true }))
