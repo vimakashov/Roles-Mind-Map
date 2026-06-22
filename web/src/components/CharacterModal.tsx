@@ -29,6 +29,8 @@ interface Props {
   avatarUpdatedAt?: string | null;
   onCancel: () => void;
   onSubmit: (input: CharacterInput, avatar: AvatarChange) => void;
+  onCreateLinked?: (input: CharacterInput, avatar: AvatarChange) => void;
+  presetRelations?: RelationConnection[];
   onDelete?: () => void;
 }
 
@@ -37,7 +39,7 @@ const empty: CharacterInput = {
 };
 
 export function CharacterModal({
-  open, mode, others, initial, characterId, avatarUpdatedAt, onCancel, onSubmit, onDelete,
+  open, mode, others, initial, characterId, avatarUpdatedAt, onCancel, onSubmit, onCreateLinked, presetRelations, onDelete,
 }: Props) {
   const [gender, setGender] = useState<Gender | "">(initial?.gender ?? "");
   const [firstName, setFirstName] = useState(initial?.firstName ?? "");
@@ -45,7 +47,7 @@ export function CharacterModal({
   const [middleName, setMiddleName] = useState(initial?.middleName ?? "");
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
   const [deceased, setDeceased] = useState(initial?.deceased ?? false);
-  const [relations, setRelations] = useState<RelationConnection[]>(initial?.relations ?? empty.relations);
+  const [relations, setRelations] = useState<RelationConnection[]>(initial?.relations ?? presetRelations ?? empty.relations);
   const [comments, setComments] = useState<CommentItem[]>(initial?.comments ?? empty.comments);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [relationsOpen, setRelationsOpen] = useState(false);
@@ -97,25 +99,41 @@ export function CharacterModal({
     pickFile(e.currentTarget);
   };
 
-  const submit = () => {
+  const buildInput = (rels: RelationConnection[]): CharacterInput => ({
+    gender: gender as Gender,
+    firstName: firstName.trim(),
+    lastName: lastName.trim() || null,
+    middleName: middleName.trim() || null,
+    age: age === "" ? null : Number(age),
+    deceased,
+    relations: rels,
+    comments,
+  });
+
+  const validate = (): boolean => {
     const result = characterFormSchema.safeParse({ gender, firstName, lastName, middleName, age });
     if (!result.success) {
       const flat: Record<string, string> = {};
       for (const issue of result.error.issues) flat[String(issue.path[0])] = issue.message;
       setErrors(flat);
-      return;
+      return false;
     }
     setErrors({});
-    onSubmit({
-      gender: gender as Gender,
-      firstName: firstName.trim(),
-      lastName: lastName.trim() || null,
-      middleName: middleName.trim() || null,
-      age: age === "" ? null : Number(age),
-      deceased,
-      relations,
-      comments,
-    }, avatar);
+    return true;
+  };
+
+  const submit = () => {
+    if (!validate()) return;
+    onSubmit(buildInput(relations), avatar);
+  };
+
+  // «Новый персонаж» from RelationsModal: commit the current rows into A, then
+  // validate + hand off to onCreateLinked (which saves A and opens a fresh B).
+  const createLinked = (rows: RelationConnection[]) => {
+    setRelations(rows);
+    setRelationsOpen(false);
+    if (!validate()) return;
+    onCreateLinked?.(buildInput(rows), avatar);
   };
 
   return (
@@ -208,7 +226,8 @@ export function CharacterModal({
 
       <RelationsModal open={relationsOpen} others={others} value={relations}
         onCancel={() => setRelationsOpen(false)}
-        onSave={(e) => { setRelations(e); setRelationsOpen(false); }} />
+        onSave={(e) => { setRelations(e); setRelationsOpen(false); }}
+        onCreateNew={onCreateLinked ? createLinked : undefined} />
 
       <CommentsModal open={commentsOpen} value={comments}
         onCancel={() => setCommentsOpen(false)}
