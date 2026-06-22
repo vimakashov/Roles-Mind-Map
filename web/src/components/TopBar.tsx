@@ -4,12 +4,13 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 
 interface Props {
+  title?: string;
   onBack?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export function TopBar({ onBack, onEdit, onDelete }: Props) {
+export function TopBar({ title, onBack, onEdit, onDelete }: Props) {
   return (
     <AppBar position="sticky" color="primary" sx={{ pt: "env(safe-area-inset-top)" }}>
       <Toolbar>
@@ -20,8 +21,12 @@ export function TopBar({ onBack, onEdit, onDelete }: Props) {
             </IconButton>
           )}
         </Box>
-        <Typography variant="h6" sx={{ flex: 1, textAlign: "center" }}>
-          Roles Mind Map
+        <Typography
+          variant="h6"
+          noWrap
+          sx={{ flex: 1, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {title || "Roles Mind Map"}
         </Typography>
         <Box sx={{ width: 96, textAlign: "right" }}>
           {onEdit && (

@@ -95,6 +95,7 @@ export function BookScreen() {
   return (
     <Box sx={{ minHeight: "100dvh", position: "relative" }}>
       <TopBar
+        title={graph.title}
         onBack={() => navigate("/")}
         onEdit={() => { setRenameTitle(graph.title ?? ""); setRenameOpen(true); }}
         onDelete={() => setDeleteBookOpen(true)}
