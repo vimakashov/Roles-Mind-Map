@@ -153,3 +153,45 @@ test("Back closes the rename dialog instead of navigating", async () => {
     expect(screen.queryByText("Переименовать книгу")).not.toBeInTheDocument(),
   );
 });
+
+test("links a brand-new character to an existing one", async () => {
+  (api.getGraph as any)
+    .mockResolvedValueOnce(oneCharacter)   // initial load: A only
+    .mockResolvedValueOnce(oneCharacter)   // refresh after saving A
+    .mockResolvedValueOnce({               // refresh after creating B
+      title: "Война и мир",
+      nodes: [
+        oneCharacter.nodes[0],
+        { id: "c2", bookId: "b1", gender: "female", firstName: "Маша", lastName: "Иванова" },
+      ],
+      edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "" }],
+    });
+  (api.updateCharacter as any).mockResolvedValue({ id: "c1" });
+  (api.createCharacter as any).mockResolvedValue({ id: "c2" });
+
+  renderBookScreen();
+  await userEvent.click(await screen.findByRole("button", { name: "tap-c1" }));
+
+  // Open relations, start add, pick «Новый персонаж».
+  await userEvent.click(await screen.findByRole("button", { name: /связи/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /добавить связь/i }));
+  await userEvent.click(await screen.findByRole("button", { name: /новый персонаж/i }));
+
+  // A is saved.
+  await waitFor(() => expect(api.updateCharacter).toHaveBeenCalledWith("c1", expect.any(Object)));
+
+  // A fresh create form (B) appears. Fill required fields and add.
+  expect(await screen.findByText(/^Новый персонаж$/)).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText(/пол/i));
+  await userEvent.click(screen.getByRole("option", { name: /женщина/i }));
+  await userEvent.type(screen.getByLabelText(/^имя/i), "Маша");
+  await userEvent.type(screen.getByLabelText(/фамилия/i), "Иванова");
+  await userEvent.click(screen.getByRole("button", { name: /^добавить$/i }));
+
+  await waitFor(() =>
+    expect(api.createCharacter).toHaveBeenCalledWith(
+      "b1",
+      expect.objectContaining({ relations: [{ otherId: "c1", role: "", color: null }] }),
+    ),
+  );
+});
