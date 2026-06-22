@@ -15,6 +15,13 @@ import {
 
 cytoscape.use(cola);
 
+// On load, frame the whole graph with this much padding (px) so every character
+// is visible; cy.fit zooms out as far as the viewport needs.
+const FIT_PADDING = 50;
+// cola's continuous layout has no settle event; keep re-framing for at most this
+// long while the nodes spread out, then release the viewport to the user.
+const FIT_SETTLE_MS = 4000;
+
 interface Props {
   graph: BookGraph;
   onNodeTap: (id: string) => void;
@@ -116,7 +123,38 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
       onNodeMovedRef.current(evt.target.id(), p.x / POSITION_SCALE, p.y / POSITION_SCALE);
     });
 
-    return () => { cy.destroy(); cyRef.current = null; };
+    // --- Frame all characters on load --------------------------------------
+    // cola runs a continuous (infinite) layout with no settle event, so keep the
+    // whole graph framed while it spreads the nodes out, then release the
+    // viewport on the user's first gesture (or after a short cap). cy.fit picks
+    // the zoom that fits every element's bounding box — labels included — into
+    // the viewport, so it inherently respects the screen's orientation and
+    // aspect ratio, zooming out as far as needed.
+    let autoFit = true;
+    let rafId = 0;
+    const fitNow = () => {
+      rafId = 0;
+      if (autoFit && !cy.destroyed()) cy.fit(undefined, FIT_PADDING);
+    };
+    const queueFit = () => {
+      if (autoFit && !rafId) rafId = requestAnimationFrame(fitNow);
+    };
+    const stopAutoFit = () => {
+      autoFit = false;
+      if (!cy.destroyed()) cy.off("position", "node", queueFit);
+    };
+    cy.on("position", "node", queueFit); // re-frame as the layout spreads nodes
+    cy.on("scrollzoom pinchzoom", stopAutoFit); // user zoom → hand over the viewport
+    cy.one("tapstart", stopAutoFit); // user pan / drag / tap → hand over
+    const fitTimer = window.setTimeout(stopAutoFit, FIT_SETTLE_MS);
+    fitNow(); // initial frame (synchronous; refits follow as the layout spreads)
+
+    return () => {
+      window.clearTimeout(fitTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+      cy.destroy();
+      cyRef.current = null;
+    };
     // Re-init when the set of node/edge ids changes (add/remove).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph.nodes.map((n) => n.id).join(","), graph.edges.map((e) => e.id).join(",")]);

@@ -134,6 +134,23 @@ test("scales node width and name font-size by the node's scale", () => {
   expect(parseFloat(leaf.style("font-size"))).toBe(11 * 1.5); // 16.5
 });
 
+test("frames all characters on load by fitting the viewport", () => {
+  const graph: BookGraph = {
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" },
+      { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" },
+    ],
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "", color: null }],
+  };
+  // Warm-up render to obtain cytoscape's shared Core prototype, then spy on fit.
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} />);
+  const fitSpy = vi.spyOn(Object.getPrototypeOf(instances[0]), "fit");
+  // A fresh mount frames the whole graph by fitting the viewport synchronously
+  // on load (no awaited frame, so cola never ticks in the null renderer).
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} />);
+  expect(fitSpy).toHaveBeenCalled();
+});
+
 test("tapping an edge calls onEdgeTap with the edge id", () => {
   const edgeTap = vi.fn();
   const graph: BookGraph = {
