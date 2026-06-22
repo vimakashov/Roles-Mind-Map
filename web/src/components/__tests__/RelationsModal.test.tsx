@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitForElementToBeRemoved } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 import { RelationsModal } from "../RelationsModal.js";
@@ -24,6 +24,7 @@ test("adds a connection via the menu and returns it on save", async () => {
   render(<RelationsModal open others={others} value={[]} onCancel={() => {}} onSave={onSave} />);
   await userEvent.click(screen.getByRole("button", { name: /добавить связь/i }));
   await userEvent.click(screen.getByRole("button", { name: /^существующий$/i }));
+  await waitForElementToBeRemoved(() => screen.queryByText(/связать с существующим/i));
   await userEvent.click(screen.getByRole("menuitem", { name: /жанна/i }));
   await userEvent.click(screen.getByRole("button", { name: /^сохранить$/i }));
   expect(onSave).toHaveBeenCalledWith([{ otherId: "z", role: "", color: null }]);
