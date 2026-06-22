@@ -10,10 +10,13 @@ import type { BookGraph } from "../../types.js";
 // Mock the cytoscape canvas (unrenderable in jsdom). Expose a button per node
 // that fires onNodeTap so we can drive the real edit/delete wiring.
 vi.mock("../../canvas/MindMap.js", () => ({
-  MindMap: ({ graph, onNodeTap }: { graph: BookGraph; onNodeTap: (id: string) => void }) => (
+  MindMap: ({ graph, onNodeTap, onEdgeTap }: { graph: BookGraph; onNodeTap: (id: string) => void; onEdgeTap?: (id: string) => void }) => (
     <div data-testid="mindmap">
       {graph.nodes.map((n) => (
         <button key={n.id} onClick={() => onNodeTap(n.id)}>{`tap-${n.id}`}</button>
+      ))}
+      {graph.edges.map((e) => (
+        <button key={e.id} onClick={() => onEdgeTap?.(e.id)}>{`tap-edge-${e.id}`}</button>
       ))}
     </div>
   ),
@@ -30,6 +33,8 @@ vi.mock("../../api/client.js", () => ({
     savePosition: vi.fn(),
     setAvatar: vi.fn(),
     deleteAvatar: vi.fn(),
+    deleteRelation: vi.fn(),
+    updateRelation: vi.fn(),
     avatarUrl: (id: string, v: string) => `/api/characters/${id}/avatar?v=${v}`,
   },
 }));
@@ -194,4 +199,30 @@ test("links a brand-new character to an existing one", async () => {
       expect.objectContaining({ relations: [{ otherId: "c1", role: "", color: null }] }),
     ),
   );
+});
+
+test("tapping an edge opens the relation modal and deletes the relationship", async () => {
+  const withEdge: BookGraph = {
+    title: "Война и мир",
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "male", firstName: "Вася", lastName: "Петров" },
+      { id: "c2", bookId: "b1", gender: "female", firstName: "Маша", lastName: "Иванова" },
+    ],
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "друзья", color: null }],
+  };
+  (api.getGraph as any)
+    .mockResolvedValueOnce(withEdge)                                   // initial load
+    .mockResolvedValueOnce({ ...withEdge, edges: [] });               // after delete
+  (api.deleteRelation as any).mockResolvedValue(undefined);
+
+  renderBookScreen();
+  await userEvent.click(await screen.findByRole("button", { name: "tap-edge-e1" }));
+
+  expect(await screen.findByText("Вася Петров — Маша Иванова")).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole("button", { name: /удалить связь/i }));
+  const confirms = await screen.findAllByRole("button", { name: /^удалить$/i });
+  await userEvent.click(confirms[confirms.length - 1]);
+
+  await waitFor(() => expect(api.deleteRelation).toHaveBeenCalledWith("e1"));
 });

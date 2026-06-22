@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from "@mui/material";
 import { api, type CharacterInput } from "../api/client.js";
-import type { BookGraph, Character } from "../types.js";
+import { RelationEditModal } from "../components/RelationEditModal.js";
+import type { BookGraph, Character, Relationship } from "../types.js";
 import { TopBar } from "../components/TopBar.js";
 import { AddFab } from "../components/AddFab.js";
 import { CharacterModal, type AvatarChange } from "../components/CharacterModal.js";
@@ -20,6 +21,7 @@ export function BookScreen() {
   const [deleteBookOpen, setDeleteBookOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
+  const [editEdge, setEditEdge] = useState<Relationship | null>(null);
   useBackClose(deleteBookOpen, () => setDeleteBookOpen(false));
   useBackClose(renameOpen, () => setRenameOpen(false));
 
@@ -112,6 +114,7 @@ export function BookScreen() {
               const character = graph.nodes.find((n) => n.id === id);
               if (character) setModal({ mode: "edit", character });
             }}
+            onEdgeTap={(id) => setEditEdge(graph.edges.find((e) => e.id === id) ?? null)}
             onNodeMoved={(id, x, y) => { void api.savePosition(id, x, y); }}
           />
         </Box>
@@ -135,6 +138,23 @@ export function BookScreen() {
           onDelete={modal.mode === "edit" ? remove : undefined}
         />
       )}
+
+      {editEdge && (() => {
+        const nameOf = (id: string) => {
+          const n = graph.nodes.find((x) => x.id === id);
+          return n ? `${n.firstName} ${n.lastName ?? ""}`.trim() : id;
+        };
+        return (
+          <RelationEditModal
+            open
+            relationship={editEdge}
+            sourceName={nameOf(editEdge.sourceId)}
+            targetName={nameOf(editEdge.targetId)}
+            onCancel={() => setEditEdge(null)}
+            onChanged={async () => { setEditEdge(null); await refresh(); }}
+          />
+        );
+      })()}
 
       <ConfirmDialog
         open={deleteBookOpen}
