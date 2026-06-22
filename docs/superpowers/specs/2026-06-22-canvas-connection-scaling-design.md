@@ -73,13 +73,16 @@ Unchanged: `border-width` (2), text-background padding/shape, colours. The avata
 image fills the node via `background-fit: cover`, so it scales with width/height
 automatically.
 
-cola layout — `edgeLength` becomes a function of the edge:
+cola layout — `edgeLength` becomes a function of the edge, using the **average**
+of the two endpoints' scales (the softer of the two options considered — it keeps
+a hub's neighbourhood from spreading too far):
 
-- `(edge) => BASE_EDGE_LENGTH * SPACING_FACTOR * Math.max(edge.source().data("scale"), edge.target().data("scale"))`
+- `(edge) => BASE_EDGE_LENGTH * SPACING_FACTOR * (edge.source().data("scale") + edge.target().data("scale")) / 2`
 
-A hub therefore pushes **every** neighbour out by its own (larger) factor. cola's
-built-in overlap avoidance reads the now-larger node bounding boxes, so big nodes
-also gain proportionate spacing without touching `nodeSpacing`.
+So a hub–leaf edge lengthens by the average of the two factors (e.g. a ×3.0 hub
+to a ×1.5 leaf → ×2.25), while a leaf–leaf edge uses only their (smaller) factors.
+cola's built-in overlap avoidance also reads the now-larger node bounding boxes,
+so big nodes gain proportionate spacing without touching `nodeSpacing`.
 
 ## Re-layout behaviour
 
