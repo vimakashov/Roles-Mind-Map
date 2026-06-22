@@ -104,3 +104,28 @@ test("living node has a null overlay (so the canvas clears a stale overlay)", ()
   };
   expect(toElements(g)[0].data.overlayUri).toBeNull();
 });
+
+test("emits a per-node scale from its degree, capped, default 1.0 when isolated", () => {
+  // hub h ↔ a,b,c,d (degree 4 → capped 3.0); each leaf degree 1 → 1.5; lone z → 1.0
+  const g: BookGraph = {
+    nodes: [
+      { id: "h", bookId: "b", gender: "female", firstName: "Анна" },
+      { id: "a", bookId: "b", gender: "male", firstName: "А" },
+      { id: "c2", bookId: "b", gender: "male", firstName: "Б" },
+      { id: "c3", bookId: "b", gender: "male", firstName: "В" },
+      { id: "c4", bookId: "b", gender: "male", firstName: "Г" },
+      { id: "z", bookId: "b", gender: "male", firstName: "Один" },
+    ],
+    edges: [
+      { id: "e1", bookId: "b", sourceId: "h", targetId: "a", role: "" },
+      { id: "e2", bookId: "b", sourceId: "h", targetId: "c2", role: "" },
+      { id: "e3", bookId: "b", sourceId: "h", targetId: "c3", role: "" },
+      { id: "e4", bookId: "b", sourceId: "h", targetId: "c4", role: "" },
+    ],
+  };
+  const els = toElements(g);
+  const scaleOf = (id: string) => els.find((e) => e.data.id === id)!.data.scale;
+  expect(scaleOf("h")).toBe(3.0);
+  expect(scaleOf("a")).toBe(1.5);
+  expect(scaleOf("z")).toBe(1.0);
+});

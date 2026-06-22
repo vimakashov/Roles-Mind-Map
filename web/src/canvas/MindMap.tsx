@@ -4,7 +4,15 @@ import cola from "cytoscape-cola";
 import type { BookGraph } from "../types.js";
 import { toElements } from "../lib/graphAdapter.js";
 import { GENDER_COLORS, EDGE_COLOR } from "../theme.js";
-import { SPACING_FACTOR, BASE_EDGE_LENGTH, BASE_NODE_SPACING, POSITION_SCALE } from "../lib/layout.js";
+import {
+  SPACING_FACTOR,
+  BASE_EDGE_LENGTH,
+  BASE_NODE_SPACING,
+  POSITION_SCALE,
+  BASE_NODE_SIZE,
+  BASE_FONT_SIZE,
+  edgeLengthForScales,
+} from "../lib/layout.js";
 
 cytoscape.use(cola);
 
@@ -53,14 +61,14 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
             "text-wrap": "wrap",
             "text-valign": "bottom",
             "text-margin-y": 6,
-            "font-size": 11,
+            "font-size": (ele: any) => BASE_FONT_SIZE * ele.data("scale"),
             color: "#54413f",
             "text-background-color": "#ffffff",
             "text-background-opacity": 1,
             "text-background-padding": "2px",
             "text-background-shape": "roundrectangle",
-            width: 46,
-            height: 46,
+            width: (ele: any) => BASE_NODE_SIZE * ele.data("scale"),
+            height: (ele: any) => BASE_NODE_SIZE * ele.data("scale"),
           },
         },
         {
@@ -85,7 +93,8 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap }: Props) {
         animate: true,
         infinite: true,
         fit: false,
-        edgeLength: BASE_EDGE_LENGTH * SPACING_FACTOR,
+        edgeLength: (edge: any) =>
+          edgeLengthForScales(edge.source().data("scale"), edge.target().data("scale")),
         nodeSpacing: BASE_NODE_SPACING * SPACING_FACTOR,
       } as any,
     });
