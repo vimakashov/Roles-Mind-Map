@@ -107,6 +107,33 @@ test("un-marking deceased clears the overlay via in-place sync (no id-set change
   expect(String(cy.getElementById("x").style("background-image"))).not.toContain("deceased");
 });
 
+test("scales node width and name font-size by the node's scale", () => {
+  // hub c1 ↔ c2,c3,c4,c5 → degree 4 → scale 3.0; leaf c2 → degree 1 → scale 1.5
+  const graph: BookGraph = {
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "female", firstName: "Анна" },
+      { id: "c2", bookId: "b1", gender: "male", firstName: "А" },
+      { id: "c3", bookId: "b1", gender: "male", firstName: "Б" },
+      { id: "c4", bookId: "b1", gender: "male", firstName: "В" },
+      { id: "c5", bookId: "b1", gender: "male", firstName: "Г" },
+    ],
+    edges: [
+      { id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "", color: null },
+      { id: "e2", bookId: "b1", sourceId: "c1", targetId: "c3", role: "", color: null },
+      { id: "e3", bookId: "b1", sourceId: "c1", targetId: "c4", role: "", color: null },
+      { id: "e4", bookId: "b1", sourceId: "c1", targetId: "c5", role: "", color: null },
+    ],
+  };
+  render(<MindMap graph={graph} onNodeTap={vi.fn()} onNodeMoved={vi.fn()} />);
+  const cy = instances[0];
+  const hub = cy.getElementById("c1");
+  const leaf = cy.getElementById("c2");
+  expect(parseFloat(hub.style("width"))).toBe(46 * 3.0); // 138
+  expect(parseFloat(hub.style("font-size"))).toBe(11 * 3.0); // 33
+  expect(parseFloat(leaf.style("width"))).toBe(46 * 1.5); // 69
+  expect(parseFloat(leaf.style("font-size"))).toBe(11 * 1.5); // 16.5
+});
+
 test("tapping an edge calls onEdgeTap with the edge id", () => {
   const edgeTap = vi.fn();
   const graph: BookGraph = {
