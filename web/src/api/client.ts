@@ -38,7 +38,7 @@ export interface CharacterInput {
   age?: number | null;
   deceased: boolean;
   relations: RelationConnection[];
-  comments?: CommentItem[];
+  comments: CommentItem[];
 }
 
 export const api = {

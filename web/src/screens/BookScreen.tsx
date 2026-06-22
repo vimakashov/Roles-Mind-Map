@@ -39,6 +39,7 @@ export function BookScreen() {
     age: modal.character.age ?? null,
     deceased: modal.character.deceased ?? false,
     relations: incidentConnections(modal.character.id, graph.edges),
+    comments: modal.character.comments ?? [],
   };
 
   const submit = async (input: CharacterInput, avatar: AvatarChange) => {
