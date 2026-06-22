@@ -11,6 +11,15 @@ const graph: BookGraph = {
   edges: [{ id: "e1", bookId: "b", sourceId: "v", targetId: "p", role: "сын" }],
 };
 
+test("toElements uses a custom avatarUrl builder when provided", () => {
+  const g: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "V", avatarUpdatedAt: "2026-06-18T00:00:00.000Z" }],
+    edges: [],
+  };
+  const node = toElements(g, { avatarUrl: (id, v) => `/custom/${id}/${v}` })[0];
+  expect(node.data.avatarUri).toBe("/custom/c1/2026-06-18T00:00:00.000Z");
+});
+
 test("maps nodes with label, avatar key and saved position", () => {
   const els = toElements(graph);
   const vNode = els.find((e) => e.data.id === "v")!;

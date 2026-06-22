@@ -44,6 +44,12 @@ test("avatarUrl includes the cache-busting version param", () => {
   );
 });
 
+test("sharedAvatarUrl targets the book-scoped public route with a cache-bust param", () => {
+  expect(api.sharedAvatarUrl("b1", "c1", "2026-06-18T00:00:00.000Z")).toBe(
+    "/api/share/b1/characters/c1/avatar?v=2026-06-18T00%3A00%3A00.000Z",
+  );
+});
+
 test("setAvatar PUTs a JSON body with base64 data and webp mime", async () => {
   fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) });
   const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/webp" });

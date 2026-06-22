@@ -226,3 +226,18 @@ test("tapping an edge opens the relation modal and deletes the relationship", as
 
   await waitFor(() => expect(api.deleteRelation).toHaveBeenCalledWith("e1"));
 });
+
+test("share button copies the public link and shows a toast", async () => {
+  (api.getGraph as any).mockResolvedValue(oneCharacter);
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.assign(navigator, { clipboard: { writeText } });
+
+  renderBookScreen();
+
+  await userEvent.click(await screen.findByRole("button", { name: /поделиться/i }));
+
+  await waitFor(() =>
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/share/b1`),
+  );
+  expect(await screen.findByText(/ссылка скопирована/i)).toBeInTheDocument();
+});
