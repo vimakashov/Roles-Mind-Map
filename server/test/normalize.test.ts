@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, expect, test } from "vitest";
 import { setupTestDb, resetData, prisma } from "./helpers.js";
 import { normalizeRelationships } from "../src/services/normalize.js";
-import { DEFAULT_USER_ID } from "../src/defaultUser.js";
+import { DEFAULT_USER_ID } from "../src/adminUser.js";
 
 beforeAll(() => setupTestDb());
 beforeEach(() => resetData());

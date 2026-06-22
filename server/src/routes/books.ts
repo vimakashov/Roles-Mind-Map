@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { DEFAULT_USER_ID } from "../defaultUser.js";
+import { DEFAULT_USER_ID } from "../adminUser.js";
 import { bookCreateSchema, bookUpdateSchema } from "../schemas.js";
 
 export async function bookRoutes(app: FastifyInstance) {

@@ -3,7 +3,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import fastifyStatic from "@fastify/static";
 import { buildApp } from "./app.js";
-import { ensureDefaultUser } from "./defaultUser.js";
+import { ensureAdminUser } from "./adminUser.js";
 import { normalizeRelationships } from "./services/normalize.js";
 
 async function main() {
@@ -19,7 +19,7 @@ async function main() {
   // already deduped). It is safe here: normalizeRelationships() ran first, so no
   // Relationship rows are actually lost — the constraint applies to clean data.
   execSync("prisma db push --skip-generate --accept-data-loss", { stdio: "inherit" });
-  await ensureDefaultUser();
+  await ensureAdminUser();
 
   const app = buildApp();
 

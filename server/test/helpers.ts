@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { prisma } from "../src/db.js";
 import { buildApp } from "../src/app.js";
-import { ensureDefaultUser } from "../src/defaultUser.js";
+import { ensureAdminUser } from "../src/adminUser.js";
 
 let pushed = false;
 
@@ -24,7 +24,7 @@ export async function resetData() {
   await prisma.character.deleteMany();
   await prisma.book.deleteMany();
   await prisma.user.deleteMany();
-  await ensureDefaultUser();
+  await ensureAdminUser();
 }
 
 export async function makeApp() {

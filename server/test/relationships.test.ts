@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, expect, test } from "vitest";
 import { setupTestDb, resetData, prisma } from "./helpers.js";
 import { reconcileRelationships } from "../src/services/relationships.js";
 import { relationConnectionSchema } from "../src/schemas.js";
-import { DEFAULT_USER_ID } from "../src/defaultUser.js";
+import { DEFAULT_USER_ID } from "../src/adminUser.js";
 
 beforeAll(() => setupTestDb());
 beforeEach(() => resetData());
