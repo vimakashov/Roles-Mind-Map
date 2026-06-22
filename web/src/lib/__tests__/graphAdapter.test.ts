@@ -105,8 +105,9 @@ test("living node has a null overlay (so the canvas clears a stale overlay)", ()
   expect(toElements(g)[0].data.overlayUri).toBeNull();
 });
 
-test("emits a per-node scale from its degree, capped, default 1.0 when isolated", () => {
-  // hub h ↔ a,b,c,d (degree 4 → capped 3.0); each leaf degree 1 → 1.5; lone z → 1.0
+test("emits an uncapped per-node scale and a gentler edgeScale from degree, default 1.0 when isolated", () => {
+  // hub h ↔ 5 leaves (degree 5 → scale 3.5 uncapped, edgeScale 1.5);
+  // each leaf degree 1 → scale 1.5, edgeScale 1.1; lone z → 1.0 / 1.0
   const g: BookGraph = {
     nodes: [
       { id: "h", bookId: "b", gender: "female", firstName: "Анна" },
@@ -114,6 +115,7 @@ test("emits a per-node scale from its degree, capped, default 1.0 when isolated"
       { id: "c2", bookId: "b", gender: "male", firstName: "Б" },
       { id: "c3", bookId: "b", gender: "male", firstName: "В" },
       { id: "c4", bookId: "b", gender: "male", firstName: "Г" },
+      { id: "c5", bookId: "b", gender: "male", firstName: "Д" },
       { id: "z", bookId: "b", gender: "male", firstName: "Один" },
     ],
     edges: [
@@ -121,11 +123,16 @@ test("emits a per-node scale from its degree, capped, default 1.0 when isolated"
       { id: "e2", bookId: "b", sourceId: "h", targetId: "c2", role: "" },
       { id: "e3", bookId: "b", sourceId: "h", targetId: "c3", role: "" },
       { id: "e4", bookId: "b", sourceId: "h", targetId: "c4", role: "" },
+      { id: "e5", bookId: "b", sourceId: "h", targetId: "c5", role: "" },
     ],
   };
   const els = toElements(g);
   const scaleOf = (id: string) => els.find((e) => e.data.id === id)!.data.scale;
-  expect(scaleOf("h")).toBe(3.0);
+  const edgeScaleOf = (id: string) => els.find((e) => e.data.id === id)!.data.edgeScale;
+  expect(scaleOf("h")).toBe(3.5); // uncapped (was capped at 3.0)
   expect(scaleOf("a")).toBe(1.5);
   expect(scaleOf("z")).toBe(1.0);
+  expect(edgeScaleOf("h")).toBe(1.5);
+  expect(edgeScaleOf("a")).toBe(1.1);
+  expect(edgeScaleOf("z")).toBe(1.0);
 });

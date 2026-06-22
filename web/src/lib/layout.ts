@@ -7,18 +7,26 @@ export const BASE_EDGE_LENGTH = 50;
 export const BASE_NODE_SPACING = 10;
 
 // Connection-based scaling: a character's node grows with its number of
-// relationships (degree). scale = 1 + 0.5·degree, capped at MAX_SCALE.
+// relationships (degree). scale = 1 + SCALE_PER_EDGE·degree — uncapped, so a
+// well-connected character keeps growing.
 export const SCALE_PER_EDGE = 0.5;
-export const MAX_SCALE = 3.0;
 export const BASE_NODE_SIZE = 46;
 export const BASE_FONT_SIZE = 11;
 
 export function scaleForDegree(degree: number): number {
-  return Math.min(1 + SCALE_PER_EDGE * degree, MAX_SCALE);
+  return 1 + SCALE_PER_EDGE * degree;
+}
+
+// Edge length grows far more gently than the avatar (EDGE_SCALE_PER_EDGE 0.1 vs
+// SCALE_PER_EDGE 0.5), so a hub's lines don't stretch in step with its node.
+export const EDGE_SCALE_PER_EDGE = 0.1;
+
+export function edgeScaleForDegree(degree: number): number {
+  return 1 + EDGE_SCALE_PER_EDGE * degree;
 }
 
 // Preferred cola edge length: base distance scaled by the average of the two
-// endpoints' scales (softer than max — keeps a hub's neighbourhood compact).
+// endpoints' edge-scales (softer than max — keeps a hub's neighbourhood compact).
 export function edgeLengthForScales(scaleA: number, scaleB: number): number {
   return (BASE_EDGE_LENGTH * SPACING_FACTOR * (scaleA + scaleB)) / 2;
 }
