@@ -55,6 +55,7 @@ export const api = {
   updateBook: (id: string, title: string) =>
     req<Book>(`/api/books/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
   getGraph: (bookId: string) => req<BookGraph>(`/api/books/${bookId}/graph`),
+  getSharedGraph: (bookId: string) => req<BookGraph>(`/api/share/${bookId}/graph`),
   createCharacter: (bookId: string, input: CharacterInput) =>
     req<Character>("/api/characters", {
       method: "POST",
@@ -81,6 +82,8 @@ export const api = {
     req<void>(`/api/relationships/${id}`, { method: "DELETE" }),
   avatarUrl: (id: string, version: string) =>
     `/api/characters/${id}/avatar?v=${encodeURIComponent(version)}`,
+  sharedAvatarUrl: (bookId: string, id: string, version: string) =>
+    `/api/share/${bookId}/characters/${id}/avatar?v=${encodeURIComponent(version)}`,
   // Callers pass a baked 512x512 WebP blob; the server enforces image/webp (z.literal) and the 512 dims.
   setAvatar: async (id: string, blob: Blob) => {
     const data = await blobToBase64(blob);
