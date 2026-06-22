@@ -11,6 +11,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog.js";
 import { MindMap } from "../canvas/MindMap.js";
 import { incidentConnections } from "../lib/relations.js";
 import { useBackClose } from "../lib/useBackClose.js";
+import { copyToClipboard } from "../lib/clipboard.js";
 
 export function BookScreen() {
   const { bookId } = useParams();
@@ -22,7 +23,7 @@ export function BookScreen() {
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
   const [editEdge, setEditEdge] = useState<Relationship | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
   useBackClose(deleteBookOpen, () => setDeleteBookOpen(false));
   useBackClose(renameOpen, () => setRenameOpen(false));
 
@@ -93,12 +94,8 @@ export function BookScreen() {
 
   const share = async () => {
     const url = `${window.location.origin}/share/${bookId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      // Clipboard unavailable (e.g. insecure context) — silently ignore.
-    }
+    const ok = await copyToClipboard(url);
+    setCopyMsg(ok ? "Ссылка скопирована" : "Не удалось скопировать ссылку");
   };
 
   const empty = loaded && graph.nodes.length === 0;
@@ -191,10 +188,10 @@ export function BookScreen() {
       </Dialog>
 
       <Snackbar
-        open={copied}
+        open={copyMsg != null}
         autoHideDuration={2500}
-        onClose={() => setCopied(false)}
-        message="Ссылка скопирована"
+        onClose={() => setCopyMsg(null)}
+        message={copyMsg ?? ""}
       />
     </Box>
   );
