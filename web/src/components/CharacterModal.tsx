@@ -4,10 +4,11 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
   MenuItem, Stack, Box, IconButton, Menu, Checkbox, FormControlLabel,
 } from "@mui/material";
-import type { Character, Gender, RelationConnection } from "../types.js";
+import type { Character, CommentItem, Gender, RelationConnection } from "../types.js";
 import { characterFormSchema } from "../lib/validation.js";
 import { Avatar } from "./Avatar.js";
 import { RelationsModal } from "./RelationsModal.js";
+import { CommentsModal } from "./CommentsModal.js";
 import { ConfirmDialog } from "./ConfirmDialog.js";
 import { AvatarCropDialog } from "./AvatarCropDialog.js";
 import { ACCEPT_ATTR, validateFileBasics, validateDimensions, loadImage } from "../lib/avatarImage.js";
@@ -32,7 +33,7 @@ interface Props {
 }
 
 const empty: CharacterInput = {
-  gender: "male", firstName: "", lastName: "", middleName: "", age: null, deceased: false, relations: [],
+  gender: "male", firstName: "", lastName: "", middleName: "", age: null, deceased: false, relations: [], comments: [],
 };
 
 export function CharacterModal({
@@ -45,8 +46,10 @@ export function CharacterModal({
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
   const [deceased, setDeceased] = useState(initial?.deceased ?? false);
   const [relations, setRelations] = useState<RelationConnection[]>(initial?.relations ?? empty.relations);
+  const [comments, setComments] = useState<CommentItem[]>(initial?.comments ?? empty.comments);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [relationsOpen, setRelationsOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Avatar staging.
@@ -111,6 +114,7 @@ export function CharacterModal({
       age: age === "" ? null : Number(age),
       deceased,
       relations,
+      comments,
     }, avatar);
   };
 
@@ -158,6 +162,11 @@ export function CharacterModal({
                 Связи ({relations.length})
               </Button>
             </Box>
+            <Box>
+              <Button variant="outlined" onClick={() => setCommentsOpen(true)}>
+                Комментарии ({comments.length})
+              </Button>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ position: "sticky", bottom: 0, bgcolor: "background.paper" }}>
@@ -200,6 +209,10 @@ export function CharacterModal({
       <RelationsModal open={relationsOpen} others={others} value={relations}
         onCancel={() => setRelationsOpen(false)}
         onSave={(e) => { setRelations(e); setRelationsOpen(false); }} />
+
+      <CommentsModal open={commentsOpen} value={comments}
+        onCancel={() => setCommentsOpen(false)}
+        onSave={(c) => { setComments(c); setCommentsOpen(false); }} />
 
       <ConfirmDialog open={confirmOpen} title="Удалить персонажа?"
         message="Это действие необратимо. Связи персонажа также будут удалены."

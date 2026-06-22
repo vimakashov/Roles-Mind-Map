@@ -6,7 +6,10 @@ export async function getBookGraph(bookId: string) {
     prisma.character.findMany({
       where: { bookId },
       orderBy: { createdAt: "asc" },
-      include: { avatar: { select: { updatedAt: true } } },
+      include: {
+        avatar: { select: { updatedAt: true } },
+        comments: { select: { id: true, text: true }, orderBy: { createdAt: "asc" } },
+      },
     }),
     prisma.relationship.findMany({ where: { bookId }, orderBy: { createdAt: "asc" } }),
   ]);

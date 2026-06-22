@@ -20,6 +20,7 @@ export function setupTestDb() {
 export async function resetData() {
   await prisma.characterAvatar.deleteMany();
   await prisma.relationship.deleteMany();
+  await prisma.comment.deleteMany();
   await prisma.character.deleteMany();
   await prisma.book.deleteMany();
   await prisma.user.deleteMany();

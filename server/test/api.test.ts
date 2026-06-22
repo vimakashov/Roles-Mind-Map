@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { setupTestDb, resetData, makeApp } from "./helpers.js";
+import { setupTestDb, resetData, makeApp, prisma } from "./helpers.js";
 import type { FastifyInstance } from "fastify";
 
 let app: FastifyInstance;
@@ -207,4 +207,72 @@ test("defaults deceased to false when omitted and toggles via PATCH", async () =
   });
   expect(patched.statusCode).toBe(200);
   expect(patched.json().deceased).toBe(true);
+});
+
+test("creates a character with comments and returns them in the graph", async () => {
+  const book = await createBook();
+  const res = await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: {
+      bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
+      comments: [{ id: null, text: "born in Moscow" }, { id: null, text: "loves chess" }],
+    },
+  });
+  expect(res.statusCode).toBe(201);
+
+  const graph = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const texts = graph.nodes[0].comments.map((c: { text: string }) => c.text);
+  expect(texts).toEqual(["born in Moscow", "loves chess"]);
+  expect(typeof graph.nodes[0].comments[0].id).toBe("string");
+});
+
+test("updates a comment and deletes another via PATCH reconciliation", async () => {
+  const book = await createBook();
+  const created = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: {
+      bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
+      comments: [{ id: null, text: "keep me" }, { id: null, text: "remove me" }],
+    },
+  })).json();
+
+  const graph1 = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const keep = graph1.nodes[0].comments.find((c: { text: string }) => c.text === "keep me");
+
+  await app.inject({
+    method: "PATCH", url: `/api/characters/${created.id}`,
+    payload: {
+      gender: "male", firstName: "Vasya", lastName: "V", relations: [],
+      comments: [{ id: keep.id, text: "kept and edited" }],
+    },
+  });
+
+  const graph2 = (await app.inject({ method: "GET", url: `/api/books/${book.id}/graph` })).json();
+  const texts = graph2.nodes[0].comments.map((c: { text: string }) => c.text);
+  expect(texts).toEqual(["kept and edited"]);
+});
+
+test("rejects a comment longer than 2000 chars", async () => {
+  const book = await createBook();
+  const res = await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: {
+      bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
+      comments: [{ id: null, text: "a".repeat(2001) }],
+    },
+  });
+  expect(res.statusCode).toBe(400);
+});
+
+test("deletes a character and cascades its comments", async () => {
+  const book = await createBook();
+  const c = (await app.inject({
+    method: "POST", url: "/api/characters",
+    payload: {
+      bookId: book.id, gender: "male", firstName: "Vasya", lastName: "V", relations: [],
+      comments: [{ id: null, text: "note" }],
+    },
+  })).json();
+  await app.inject({ method: "DELETE", url: `/api/characters/${c.id}` });
+  expect(await prisma.comment.count()).toBe(0);
 });

@@ -30,7 +30,7 @@ test("edit mode shows a delete button", () => {
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "female", firstName: "Аня", lastName: "С", deceased: false, relations: [] }}
+      initial={{ gender: "female", firstName: "Аня", lastName: "С", deceased: false, relations: [], comments: [] }}
       onCancel={() => {}} onSubmit={() => {}} onDelete={() => {}}
     />,
   );
@@ -41,7 +41,7 @@ test("avatar menu offers Add when the character has no custom avatar", async () 
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [], comments: [] }}
       characterId="c1"
       onCancel={() => {}} onSubmit={() => {}} onDelete={() => {}}
     />,
@@ -55,7 +55,7 @@ test("avatar menu offers Change/Remove when a custom avatar exists, and Remove s
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [], comments: [] }}
       characterId="c1" avatarUpdatedAt="2026-06-18T00:00:00.000Z"
       onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
     />,
@@ -86,7 +86,7 @@ test("toggling «Умер» submits deceased: true", async () => {
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [], comments: [] }}
       onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
     />,
   );
@@ -103,7 +103,7 @@ test("defaults deceased to false when the box is left unchecked", async () => {
   render(
     <CharacterModal
       open mode="edit" others={[]}
-      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [] }}
+      initial={{ gender: "male", firstName: "Б", lastName: "В", deceased: false, relations: [], comments: [] }}
       onCancel={() => {}} onSubmit={onSubmit} onDelete={() => {}}
     />,
   );
@@ -112,4 +112,19 @@ test("defaults deceased to false when the box is left unchecked", async () => {
     expect.objectContaining({ deceased: false }),
     { kind: "none" },
   );
+});
+
+test("shows the staged comment count on the Комментарии button", () => {
+  render(
+    <CharacterModal
+      open mode="edit" others={[]}
+      initial={{
+        gender: "male", firstName: "Vasya", lastName: "V", middleName: "", age: null,
+        deceased: false, relations: [],
+        comments: [{ id: "c1", text: "one" }, { id: "c2", text: "two" }],
+      }}
+      onCancel={() => {}} onSubmit={() => {}} onDelete={() => {}}
+    />,
+  );
+  expect(screen.getByRole("button", { name: /комментарии \(2\)/i })).toBeInTheDocument();
 });

@@ -41,6 +41,7 @@ model Character {
   outgoing   Relationship[] @relation("source")
   incoming   Relationship[] @relation("target")
   avatar     CharacterAvatar?
+  comments   Comment[]
 }
 
 model Relationship {
@@ -65,5 +66,14 @@ model CharacterAvatar {
   width       Int
   height      Int
   updatedAt   DateTime  @updatedAt
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  characterId String
+  text        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 }
