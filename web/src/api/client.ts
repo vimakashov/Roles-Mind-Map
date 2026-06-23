@@ -42,8 +42,6 @@ export interface CharacterInput {
 }
 
 export const api = {
-  register: (nickname: string, password: string) =>
-    req<AuthUser>("/api/auth/register", { method: "POST", body: JSON.stringify({ nickname, password }) }),
   login: (nickname: string, password: string) =>
     req<AuthUser>("/api/auth/login", { method: "POST", body: JSON.stringify({ nickname, password }) }),
   me: () => req<AuthUser>("/api/auth/me"),

@@ -4,6 +4,7 @@ import { prisma } from "../src/db.js";
 import { buildApp } from "../src/app.js";
 import { ensureAdminUser } from "../src/adminUser.js";
 import { SESSION_COOKIE } from "../src/auth.js";
+import { createUser } from "../src/services/users.js";
 
 let pushed = false;
 
@@ -35,9 +36,10 @@ export async function makeApp() {
   return app;
 }
 
-/** Register a user and return a `cookie` header string carrying their session. */
+/** Create a user, log them in, and return a `cookie` header string carrying their session. */
 export async function signIn(app: FastifyInstance, nickname = "tester", password = "pass1"): Promise<string> {
-  const res = await app.inject({ method: "POST", url: "/api/auth/register", payload: { nickname, password } });
+  await createUser(nickname, password);
+  const res = await app.inject({ method: "POST", url: "/api/auth/login", payload: { nickname, password } });
   const c = res.cookies.find((x) => x.name === SESSION_COOKIE);
   if (!c) throw new Error(`signIn failed: ${res.statusCode} ${res.body}`);
   return `${SESSION_COOKIE}=${c.value}`;

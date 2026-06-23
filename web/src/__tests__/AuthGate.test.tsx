@@ -12,6 +12,6 @@ test("renders children when /me succeeds", async () => {
 test("renders the auth screen when /me returns 401", async () => {
   vi.spyOn(api, "me").mockRejectedValue(new Error("GET /api/auth/me -> 401"));
   render(<AuthGate><div>secret app</div></AuthGate>);
-  await waitFor(() => expect(screen.getByRole("button", { name: /^зарегистрироваться$/i })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole("button", { name: /^войти$/i })).toBeInTheDocument());
   expect(screen.queryByText("secret app")).not.toBeInTheDocument();
 });
