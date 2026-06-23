@@ -7,10 +7,7 @@ import { nicknameField, passwordField } from "../lib/validation.js";
 import { useBackClose } from "../lib/useBackClose.js";
 import type { AuthUser } from "../types.js";
 
-type Mode = "register" | "login";
-
 export function AuthScreen({ onAuthenticated }: { onAuthenticated: (u: AuthUser) => void }) {
-  const [mode, setMode] = useState<Mode>("register");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +23,11 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (u: AuthUser)
     setError(null);
     setBusy(true);
     try {
-      const user = mode === "register"
-        ? await api.register(n.data, p.data)
-        : await api.login(n.data, p.data);
+      const user = await api.login(n.data, p.data);
       onAuthenticated(user);
     } catch (e) {
       const msg = String((e as Error).message);
-      if (msg.includes("409")) setError("Никнейм занят");
-      else if (msg.includes("401")) setError("Неверный логин или пароль");
+      if (msg.includes("401")) setError("Неверный логин или пароль");
       else setError("Не удалось выполнить запрос");
     } finally {
       setBusy(false);
@@ -50,18 +44,8 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (u: AuthUser)
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
         {error && <Typography color="error" variant="body2">{error}</Typography>}
-
-        {mode === "register" ? (
-          <>
-            <Button variant="contained" disabled={busy} onClick={submit}>Зарегистрироваться</Button>
-            <Button onClick={() => { setError(null); setMode("login"); }}>Уже есть аккаунт</Button>
-          </>
-        ) : (
-          <>
-            <Button variant="contained" disabled={busy} onClick={submit}>Войти</Button>
-            <Button onClick={() => setForgot(true)}>Забыли пароль?</Button>
-          </>
-        )}
+        <Button variant="contained" disabled={busy} onClick={submit}>Войти</Button>
+        <Button onClick={() => setForgot(true)}>Забыли пароль?</Button>
       </Stack>
 
       <Dialog open={forgot} onClose={() => setForgot(false)}>
