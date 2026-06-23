@@ -8,33 +8,12 @@ beforeAll(async () => { setupTestDb(); app = await makeApp(); });
 afterAll(async () => { await app.close(); });
 beforeEach(() => resetData());
 
-test("register creates an account, sets a session cookie, and auto-authenticates", async () => {
+test("the public register route no longer exists (404)", async () => {
   const res = await app.inject({
     method: "POST", url: "/api/auth/register",
     payload: { nickname: "tester", password: "pass1" },
   });
-  expect(res.statusCode).toBe(201);
-  expect(res.json()).toMatchObject({ name: "tester" });
-  const setCookie = res.cookies.find((c) => c.name === SESSION_COOKIE);
-  expect(setCookie).toBeTruthy();
-
-  const me = await app.inject({
-    method: "GET", url: "/api/auth/me",
-    cookies: { [SESSION_COOKIE]: setCookie!.value },
-  });
-  expect(me.statusCode).toBe(200);
-  expect(me.json()).toMatchObject({ name: "tester" });
-});
-
-test("register rejects a duplicate nickname case-insensitively (409)", async () => {
-  await app.inject({ method: "POST", url: "/api/auth/register", payload: { nickname: "Tester", password: "pass1" } });
-  const dup = await app.inject({ method: "POST", url: "/api/auth/register", payload: { nickname: "tester", password: "pass2" } });
-  expect(dup.statusCode).toBe(409);
-});
-
-test("register rejects an invalid nickname (400)", async () => {
-  const res = await app.inject({ method: "POST", url: "/api/auth/register", payload: { nickname: "ab", password: "pass1" } });
-  expect(res.statusCode).toBe(400);
+  expect(res.statusCode).toBe(404);
 });
 
 test("login succeeds for the seeded admin and sets a cookie", async () => {
