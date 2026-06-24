@@ -7,6 +7,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Wheel, ShadeSlider, hexToHsva, hsvaToHex } from "@uiw/react-color";
 import { LinkChoiceDialog } from "./LinkChoiceDialog.js";
+import { sortForPicker } from "../lib/sortCharacters.js";
 import type { Character, RelationConnection } from "../types.js";
 import { EDGE_COLOR } from "../theme.js";
 
@@ -43,7 +44,7 @@ export function RelationsModal({ open, others, value, onCancel, onSave, onCreate
   };
 
   const connectedIds = new Set(rows.map((r) => r.otherId));
-  const available = others.filter((o) => !connectedIds.has(o.id));
+  const available = sortForPicker(others.filter((o) => !connectedIds.has(o.id)));
 
   const addConnection = (otherId: string) => {
     setRows((rs) => [...rs, { otherId, role: "", color: null }]);
