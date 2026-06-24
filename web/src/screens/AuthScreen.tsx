@@ -52,7 +52,7 @@ export function AuthScreen({ onAuthenticated }: { onAuthenticated: (u: AuthUser)
         <DialogTitle>Восстановление пароля</DialogTitle>
         <DialogContent>
           <Typography>
-            Для восстановления пароля обратитесь к администратору сайта, контакты указаны на сайте:{" "}
+            Для восстановления пароля или регистрации обратитесь к администратору сайта, контакты указаны на сайте:{" "}
             <Link href="https://mkv.qa/" target="_blank" rel="noopener">https://mkv.qa/</Link>
           </Typography>
         </DialogContent>
