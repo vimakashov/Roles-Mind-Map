@@ -2,6 +2,9 @@
 
 A simple mind map for book characters.
 
+## Production server of this project you can find at:
+https://rolesmap.fyi
+
 ## Run (Docker)
 
 ```bash

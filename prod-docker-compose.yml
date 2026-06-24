@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    # порт наружу больше НЕ публикуем — только внутренняя docker-сеть
+    expose:
+      - "3000"
+    environment:
+      - SESSION_SECRET=${SESSION_SECRET:?set SESSION_SECRET in .env}
+    volumes:
+      - rmm-data:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  rmm-data:
+  caddy-data:
+  caddy-config:
