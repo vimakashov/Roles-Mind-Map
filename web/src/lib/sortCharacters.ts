@@ -8,7 +8,7 @@ const scriptGroup = (name: string) => (CYRILLIC.test(name.charAt(0)) ? 1 : 0);
 
 /**
  * Sort characters for the relations picker dropdown: Latin-script display
- * names first (descending), then Cyrillic display names (descending).
+ * names first (A→Z), then Cyrillic display names (А→Я).
  * Non-mutating — returns a new array.
  */
 export function sortForPicker<T extends PickerChar>(chars: T[]): T[] {
@@ -18,6 +18,6 @@ export function sortForPicker<T extends PickerChar>(chars: T[]): T[] {
     const ga = scriptGroup(na);
     const gb = scriptGroup(nb);
     if (ga !== gb) return ga - gb; // group 0 (Latin) before group 1 (Cyrillic)
-    return nb.localeCompare(na); // descending within group
+    return na.localeCompare(nb); // ascending within group
   });
 }

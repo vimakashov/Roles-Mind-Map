@@ -12,40 +12,40 @@ test("Latin block comes before Cyrillic block", () => {
   expect(names(sortForPicker(input))).toEqual(["Bob", "Анна"]);
 });
 
-test("Latin group is sorted descending", () => {
+test("Latin group is sorted ascending (A→Z)", () => {
   const input: C[] = [
-    { id: "1", firstName: "Adam", lastName: null },
-    { id: "2", firstName: "Zoe", lastName: null },
+    { id: "1", firstName: "Zoe", lastName: null },
+    { id: "2", firstName: "Adam", lastName: null },
     { id: "3", firstName: "Mia", lastName: null },
   ];
-  expect(names(sortForPicker(input))).toEqual(["Zoe", "Mia", "Adam"]);
+  expect(names(sortForPicker(input))).toEqual(["Adam", "Mia", "Zoe"]);
 });
 
-test("Cyrillic group is sorted descending", () => {
+test("Cyrillic group is sorted ascending (А→Я)", () => {
   const input: C[] = [
-    { id: "1", firstName: "Анна", lastName: null },
-    { id: "2", firstName: "Яна", lastName: null },
+    { id: "1", firstName: "Яна", lastName: null },
+    { id: "2", firstName: "Анна", lastName: null },
     { id: "3", firstName: "Мила", lastName: null },
   ];
-  expect(names(sortForPicker(input))).toEqual(["Яна", "Мила", "Анна"]);
+  expect(names(sortForPicker(input))).toEqual(["Анна", "Мила", "Яна"]);
 });
 
-test("mixed interleaved input is grouped then descending", () => {
+test("mixed interleaved input is grouped then ascending", () => {
   const input: C[] = [
     { id: "1", firstName: "Мила", lastName: null },
-    { id: "2", firstName: "Adam", lastName: null },
+    { id: "2", firstName: "Zoe", lastName: null },
     { id: "3", firstName: "Яна", lastName: null },
-    { id: "4", firstName: "Zoe", lastName: null },
+    { id: "4", firstName: "Adam", lastName: null },
   ];
-  expect(names(sortForPicker(input))).toEqual(["Zoe", "Adam", "Яна", "Мила"]);
+  expect(names(sortForPicker(input))).toEqual(["Adam", "Zoe", "Мила", "Яна"]);
 });
 
 test("uses full display name including lastName", () => {
   const input: C[] = [
-    { id: "1", firstName: "Ivan", lastName: "Adams" },
-    { id: "2", firstName: "Ivan", lastName: "Zorin" },
+    { id: "1", firstName: "Ivan", lastName: "Zorin" },
+    { id: "2", firstName: "Ivan", lastName: "Adams" },
   ];
-  expect(names(sortForPicker(input))).toEqual(["Ivan Zorin", "Ivan Adams"]);
+  expect(names(sortForPicker(input))).toEqual(["Ivan Adams", "Ivan Zorin"]);
 });
 
 test("null lastName produces no trailing space and sorts on first name", () => {
@@ -53,7 +53,7 @@ test("null lastName produces no trailing space and sorts on first name", () => {
     { id: "1", firstName: "Ben", lastName: null },
     { id: "2", firstName: "Ann", lastName: undefined },
   ];
-  expect(names(sortForPicker(input))).toEqual(["Ben", "Ann"]);
+  expect(names(sortForPicker(input))).toEqual(["Ann", "Ben"]);
 });
 
 test("a digit-leading name buckets with the Latin group", () => {
@@ -62,8 +62,8 @@ test("a digit-leading name buckets with the Latin group", () => {
     { id: "2", firstName: "3PO", lastName: null },
     { id: "3", firstName: "Zoe", lastName: null },
   ];
-  // Latin group (Zoe, 3PO) descending, then Cyrillic (Анна)
-  expect(names(sortForPicker(input))).toEqual(["Zoe", "3PO", "Анна"]);
+  // Latin group (3PO, Zoe) ascending, then Cyrillic (Анна)
+  expect(names(sortForPicker(input))).toEqual(["3PO", "Zoe", "Анна"]);
 });
 
 test("does not mutate the input array", () => {
