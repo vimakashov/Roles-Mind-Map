@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render } from "@testing-library/react";
 import { expect, test, vi, beforeEach } from "vitest";
 import type { Core } from "cytoscape";
@@ -197,4 +198,44 @@ test("preserves the viewport (no refit) when the node id set changes", () => {
   // The re-init must restore the captured viewport and must NOT re-fit.
   expect(viewportSpy).toHaveBeenCalledWith({ zoom: 2, pan: { x: 10, y: 20 } });
   expect(fitSpy).not.toHaveBeenCalled();
+});
+
+test("fits (does not restore) on the first populated render after an empty graph", () => {
+  const noop = vi.fn();
+  // The pre-load BookScreen render mounts MindMap with an empty graph before the
+  // fetch resolves; that mount must not leave a viewport for the real data to
+  // restore, or the first real frame shows a stale (over-zoomed) viewport.
+  const emptyGraph: BookGraph = { nodes: [], edges: [] };
+  const { rerender } = render(<MindMap graph={emptyGraph} onNodeTap={noop} onNodeMoved={noop} />);
+
+  const fitSpy = vi.spyOn(Object.getPrototypeOf(instances[0]), "fit");
+
+  const populated: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" }],
+    edges: [],
+  };
+  rerender(<MindMap graph={populated} onNodeTap={noop} onNodeMoved={noop} />);
+
+  expect(fitSpy).toHaveBeenCalled();
+});
+
+test("re-fits on a fresh mount under StrictMode (setup/cleanup/setup is idempotent)", () => {
+  const noop = vi.fn();
+  const graph: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" }],
+    edges: [],
+  };
+  // Warm-up render to grab the shared Core prototype, then spy on fit.
+  render(<MindMap graph={graph} onNodeTap={noop} onNodeMoved={noop} />);
+  const fitSpy = vi.spyOn(Object.getPrototypeOf(instances[0]), "fit");
+
+  // StrictMode double-invokes effects (setup → cleanup → setup) on mount with an
+  // unchanged id set. The live (second) instance must re-fit, not restore the
+  // viewport captured from the first setup's teardown.
+  render(
+    <StrictMode>
+      <MindMap graph={graph} onNodeTap={noop} onNodeMoved={noop} />
+    </StrictMode>,
+  );
+  expect(fitSpy).toHaveBeenCalledTimes(2);
 });

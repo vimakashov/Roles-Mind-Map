@@ -48,9 +48,19 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
   // Snapshot of the user's pan/zoom, captured on teardown so the next re-init
   // (triggered by a node/edge add/remove) can restore it instead of re-fitting.
   const viewportRef = useRef<{ pan: { x: number; y: number }; zoom: number } | null>(null);
+  // The id-set signature from the previous init run. Lets the effect tell a
+  // genuine add/remove (restore the viewport) apart from a same-id-set re-run
+  // such as React StrictMode's dev double-invoke (must re-fit, never restore).
+  const prevIdSigRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
+    // Mirror this effect's dependency signature (see the deps array below).
+    const idSig =
+      graph.nodes.map((n) => n.id).join(",") + "|" + graph.edges.map((e) => e.id).join(",");
+    // A real id-set change: not the first mount, and not a StrictMode re-run.
+    const isReinit = prevIdSigRef.current !== null && prevIdSigRef.current !== idSig;
+    prevIdSigRef.current = idSig;
     const cy = cytoscape({
       container: ref.current,
       elements: toElements(graph, { avatarUrl }),
@@ -132,10 +142,10 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
     // cola's layout uses fit: false, so it never touches the viewport itself.
     let rafId = 0;
     let fitTimer = 0;
-    if (viewportRef.current) {
-      // Re-init (a node/edge was added or removed): restore the snapshot taken
-      // on teardown and skip auto-fit, so the user stays at the same pan/zoom
-      // while cola re-spreads the nodes underneath.
+    if (isReinit && viewportRef.current) {
+      // Re-init from a node/edge add or remove: restore the snapshot taken on
+      // teardown and skip auto-fit, so the user stays at the same pan/zoom while
+      // cola re-spreads the nodes underneath.
       cy.viewport({ zoom: viewportRef.current.zoom, pan: viewportRef.current.pan });
     } else {
       // First mount of this book: frame the whole graph. cola has no settle
@@ -162,8 +172,12 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
 
     return () => {
       // Capture the current viewport before teardown so the next re-init can
-      // restore it (clone cy.pan() — it returns a live position object).
-      viewportRef.current = { pan: { ...cy.pan() }, zoom: cy.zoom() };
+      // restore it (clone cy.pan() — it returns a live position object). Skip an
+      // empty graph (e.g. the pre-load mount) so the first populated render
+      // auto-fits instead of restoring a blank/default viewport.
+      if (!cy.destroyed() && cy.nodes().nonempty()) {
+        viewportRef.current = { pan: { ...cy.pan() }, zoom: cy.zoom() };
+      }
       if (fitTimer) window.clearTimeout(fitTimer);
       if (rafId) cancelAnimationFrame(rafId);
       cy.destroy();
