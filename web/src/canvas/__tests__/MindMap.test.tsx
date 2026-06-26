@@ -254,6 +254,36 @@ test("seeds a brand-new node beside a connected neighbour on re-init", () => {
   expect(cy1.getElementById("c2").position()).toEqual({ x: 130, y: 230 });
 });
 
+test("re-asserts the restored viewport if the canvas re-centers after re-init (WebKit)", () => {
+  const noop = vi.fn();
+  const graphA: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" }],
+    edges: [],
+  };
+  const { rerender } = render(<MindMap graph={graphA} onNodeTap={noop} onNodeMoved={noop} />);
+
+  const cy0 = instances[0];
+  cy0.zoom(2);
+  cy0.pan({ x: 10, y: 20 });
+
+  // Add a second node → re-init; the fresh instance restores the viewport.
+  const graphB: BookGraph = {
+    nodes: [...graphA.nodes, { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" }],
+    edges: [],
+  };
+  rerender(<MindMap graph={graphB} onNodeTap={noop} onNodeMoved={noop} />);
+
+  const cy1 = instances[1];
+  expect(cy1.zoom()).toBe(2);
+  expect(cy1.pan()).toEqual({ x: 10, y: 20 });
+
+  // Simulate WebKit re-centering the just-created canvas a frame later. The
+  // hold must snap the viewport back to the user's restored pan/zoom.
+  cy1.viewport({ zoom: 0.25, pan: { x: 0, y: 0 } });
+  expect(cy1.zoom()).toBe(2);
+  expect(cy1.pan()).toEqual({ x: 10, y: 20 });
+});
+
 test("fits (does not restore) on the first populated render after an empty graph", () => {
   const noop = vi.fn();
   // The pre-load BookScreen render mounts MindMap with an empty graph before the

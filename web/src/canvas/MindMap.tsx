@@ -149,9 +149,10 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
     let rafId = 0;
     let fitTimer = 0;
     if (isReinit && viewportRef.current) {
+      const vp = viewportRef.current;
       // Re-init from a node/edge add or remove: restore the snapshot taken on
       // teardown and skip auto-fit, so the user stays at the same pan/zoom.
-      cy.viewport({ zoom: viewportRef.current.zoom, pan: viewportRef.current.pan });
+      cy.viewport({ zoom: vp.zoom, pan: vp.pan });
       // Pin existing characters to their last live positions so cola doesn't
       // snap them back to stale stored coords and re-spread the graph; seed any
       // brand-new node beside a connected neighbour so cola only nudges it.
@@ -172,6 +173,27 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
           });
         });
       }
+      // WebKit/Safari re-centers a freshly created canvas once it measures the
+      // container (often a frame or two later), silently clobbering the restore
+      // above; Chrome measures synchronously and never does. Re-assert the
+      // restored viewport on any change WE didn't make, until the user takes
+      // over (first gesture) or a short grace period elapses. cola uses
+      // fit: false so it never moves the viewport — the only stray viewport
+      // events here are WebKit's re-center, so on Chrome this is inert.
+      let holding = true;
+      const reassert = () => {
+        if (!holding || cy.destroyed()) return;
+        holding = false; // ignore the viewport event our own call below re-fires
+        cy.viewport({ zoom: vp.zoom, pan: vp.pan });
+        holding = true;
+      };
+      const release = () => {
+        holding = false;
+        if (!cy.destroyed()) cy.off("viewport", reassert);
+      };
+      cy.on("viewport", reassert);
+      cy.one("scrollzoom pinchzoom tapstart", release); // hand over on real input
+      fitTimer = window.setTimeout(release, 800);
     } else {
       // First mount of this book: frame the whole graph. cola has no settle
       // event, so keep re-framing while it spreads the nodes out, then release
