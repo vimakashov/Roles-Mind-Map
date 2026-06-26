@@ -119,6 +119,7 @@ export function BookScreen() {
       ) : (
         <Box sx={{ position: "absolute", top: 56, left: 0, right: 0, bottom: 0 }}>
           <MindMap
+            key={bookId}
             graph={graph}
             onNodeTap={(id) => {
               const character = graph.nodes.find((n) => n.id === id);
