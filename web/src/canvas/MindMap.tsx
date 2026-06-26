@@ -52,6 +52,12 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
   // genuine add/remove (restore the viewport) apart from a same-id-set re-run
   // such as React StrictMode's dev double-invoke (must re-fit, never restore).
   const prevIdSigRef = useRef<string | null>(null);
+  // Live node positions captured on teardown. cola's continuous layout moves
+  // nodes without persisting them (only drag saves posX/posY), so on re-init
+  // toElements would snap every node back to its stale stored position and
+  // cola would re-spread the whole graph. Reapplying the live snapshot keeps
+  // existing characters exactly where the user last saw them.
+  const positionsRef = useRef<Map<string, { x: number; y: number }> | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -144,9 +150,28 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
     let fitTimer = 0;
     if (isReinit && viewportRef.current) {
       // Re-init from a node/edge add or remove: restore the snapshot taken on
-      // teardown and skip auto-fit, so the user stays at the same pan/zoom while
-      // cola re-spreads the nodes underneath.
+      // teardown and skip auto-fit, so the user stays at the same pan/zoom.
       cy.viewport({ zoom: viewportRef.current.zoom, pan: viewportRef.current.pan });
+      // Pin existing characters to their last live positions so cola doesn't
+      // snap them back to stale stored coords and re-spread the graph; seed any
+      // brand-new node beside a connected neighbour so cola only nudges it.
+      const saved = positionsRef.current;
+      if (saved) {
+        cy.batch(() => {
+          cy.nodes().forEach((n) => {
+            const p = saved.get(n.id());
+            if (p) {
+              n.position(p);
+            } else {
+              const anchor = n
+                .neighborhood("node")
+                .map((m) => saved.get(m.id()))
+                .find((q): q is { x: number; y: number } => q != null);
+              if (anchor) n.position({ x: anchor.x + 30, y: anchor.y + 30 });
+            }
+          });
+        });
+      }
     } else {
       // First mount of this book: frame the whole graph. cola has no settle
       // event, so keep re-framing while it spreads the nodes out, then release
@@ -177,6 +202,7 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
       // auto-fits instead of restoring a blank/default viewport.
       if (!cy.destroyed() && cy.nodes().nonempty()) {
         viewportRef.current = { pan: { ...cy.pan() }, zoom: cy.zoom() };
+        positionsRef.current = new Map(cy.nodes().map((n) => [n.id(), { ...n.position() }]));
       }
       if (fitTimer) window.clearTimeout(fitTimer);
       if (rafId) cancelAnimationFrame(rafId);
