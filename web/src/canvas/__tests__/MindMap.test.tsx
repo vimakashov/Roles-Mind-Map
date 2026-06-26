@@ -200,6 +200,60 @@ test("preserves the viewport (no refit) when the node id set changes", () => {
   expect(fitSpy).not.toHaveBeenCalled();
 });
 
+test("pins existing node positions across re-init so they don't snap back", () => {
+  const noop = vi.fn();
+  // Two characters with stored positions; once mounted the user (or cola) has
+  // moved them to new live coordinates that were never persisted.
+  const graphA: BookGraph = {
+    nodes: [
+      { id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X", posX: 0, posY: 0 },
+      { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y", posX: 0, posY: 0 },
+    ],
+    edges: [],
+  };
+  const { rerender } = render(<MindMap graph={graphA} onNodeTap={noop} onNodeMoved={noop} />);
+
+  // Move the nodes to "live" positions that differ from their stored posX/posY.
+  const cy0 = instances[0];
+  cy0.getElementById("c1").position({ x: 111, y: 222 });
+  cy0.getElementById("c2").position({ x: 333, y: 444 });
+
+  // Add an edge → edge id set changes → MindMap re-inits cytoscape.
+  const graphB: BookGraph = {
+    ...graphA,
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "", color: null }],
+  };
+  rerender(<MindMap graph={graphB} onNodeTap={noop} onNodeMoved={noop} />);
+
+  // The fresh instance must reapply the live positions, not the stored 0,0.
+  const cy1 = instances[1];
+  expect(cy1.getElementById("c1").position()).toEqual({ x: 111, y: 222 });
+  expect(cy1.getElementById("c2").position()).toEqual({ x: 333, y: 444 });
+});
+
+test("seeds a brand-new node beside a connected neighbour on re-init", () => {
+  const noop = vi.fn();
+  const graphA: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X", posX: 0, posY: 0 }],
+    edges: [],
+  };
+  const { rerender } = render(<MindMap graph={graphA} onNodeTap={noop} onNodeMoved={noop} />);
+
+  instances[0].getElementById("c1").position({ x: 100, y: 200 });
+
+  // Add a new linked character c2 with no stored position.
+  const graphB: BookGraph = {
+    nodes: [...graphA.nodes, { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" }],
+    edges: [{ id: "e1", bookId: "b1", sourceId: "c1", targetId: "c2", role: "", color: null }],
+  };
+  rerender(<MindMap graph={graphB} onNodeTap={noop} onNodeMoved={noop} />);
+
+  // c1 stays put; c2 is seeded next to it (anchor + 30,30) instead of at origin.
+  const cy1 = instances[1];
+  expect(cy1.getElementById("c1").position()).toEqual({ x: 100, y: 200 });
+  expect(cy1.getElementById("c2").position()).toEqual({ x: 130, y: 230 });
+});
+
 test("fits (does not restore) on the first populated render after an empty graph", () => {
   const noop = vi.fn();
   // The pre-load BookScreen render mounts MindMap with an empty graph before the
