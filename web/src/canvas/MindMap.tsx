@@ -45,6 +45,10 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
   onNodeMovedRef.current = onNodeMoved;
   onEdgeTapRef.current = onEdgeTap;
 
+  // Snapshot of the user's pan/zoom, captured on teardown so the next re-init
+  // (triggered by a node/edge add/remove) can restore it instead of re-fitting.
+  const viewportRef = useRef<{ pan: { x: number; y: number }; zoom: number } | null>(null);
+
   useEffect(() => {
     if (!ref.current) return;
     const cy = cytoscape({
@@ -124,34 +128,43 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
       onNodeMovedRef.current(evt.target.id(), p.x / POSITION_SCALE, p.y / POSITION_SCALE);
     });
 
-    // --- Frame all characters on load --------------------------------------
-    // cola runs a continuous (infinite) layout with no settle event, so keep the
-    // whole graph framed while it spreads the nodes out, then release the
-    // viewport on the user's first gesture (or after a short cap). cy.fit picks
-    // the zoom that fits every element's bounding box — labels included — into
-    // the viewport, so it inherently respects the screen's orientation and
-    // aspect ratio, zooming out as far as needed.
-    let autoFit = true;
+    // --- Viewport: fit on first load, otherwise keep the user where they are ---
+    // cola's layout uses fit: false, so it never touches the viewport itself.
     let rafId = 0;
-    const fitNow = () => {
-      rafId = 0;
-      if (autoFit && !cy.destroyed()) cy.fit(undefined, FIT_PADDING);
-    };
-    const queueFit = () => {
-      if (autoFit && !rafId) rafId = requestAnimationFrame(fitNow);
-    };
-    const stopAutoFit = () => {
-      autoFit = false;
-      if (!cy.destroyed()) cy.off("position", "node", queueFit);
-    };
-    cy.on("position", "node", queueFit); // re-frame as the layout spreads nodes
-    cy.on("scrollzoom pinchzoom", stopAutoFit); // user zoom → hand over the viewport
-    cy.one("tapstart", stopAutoFit); // user pan / drag / tap → hand over
-    const fitTimer = window.setTimeout(stopAutoFit, FIT_SETTLE_MS);
-    fitNow(); // initial frame (synchronous; refits follow as the layout spreads)
+    let fitTimer = 0;
+    if (viewportRef.current) {
+      // Re-init (a node/edge was added or removed): restore the snapshot taken
+      // on teardown and skip auto-fit, so the user stays at the same pan/zoom
+      // while cola re-spreads the nodes underneath.
+      cy.viewport({ zoom: viewportRef.current.zoom, pan: viewportRef.current.pan });
+    } else {
+      // First mount of this book: frame the whole graph. cola has no settle
+      // event, so keep re-framing while it spreads the nodes out, then release
+      // the viewport on the user's first gesture (or after a short cap).
+      let autoFit = true;
+      const fitNow = () => {
+        rafId = 0;
+        if (autoFit && !cy.destroyed()) cy.fit(undefined, FIT_PADDING);
+      };
+      const queueFit = () => {
+        if (autoFit && !rafId) rafId = requestAnimationFrame(fitNow);
+      };
+      const stopAutoFit = () => {
+        autoFit = false;
+        if (!cy.destroyed()) cy.off("position", "node", queueFit);
+      };
+      cy.on("position", "node", queueFit); // re-frame as the layout spreads nodes
+      cy.on("scrollzoom pinchzoom", stopAutoFit); // user zoom → hand over the viewport
+      cy.one("tapstart", stopAutoFit); // user pan / drag / tap → hand over
+      fitTimer = window.setTimeout(stopAutoFit, FIT_SETTLE_MS);
+      fitNow(); // initial frame (synchronous; refits follow as the layout spreads)
+    }
 
     return () => {
-      window.clearTimeout(fitTimer);
+      // Capture the current viewport before teardown so the next re-init can
+      // restore it (clone cy.pan() — it returns a live position object).
+      viewportRef.current = { pan: { ...cy.pan() }, zoom: cy.zoom() };
+      if (fitTimer) window.clearTimeout(fitTimer);
       if (rafId) cancelAnimationFrame(rafId);
       cy.destroy();
       cyRef.current = null;

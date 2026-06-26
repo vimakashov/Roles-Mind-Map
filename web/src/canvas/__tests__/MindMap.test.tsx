@@ -165,3 +165,36 @@ test("tapping an edge calls onEdgeTap with the edge id", () => {
   cy.getElementById("e1").emit("tap");
   expect(edgeTap).toHaveBeenCalledWith("e1");
 });
+
+test("preserves the viewport (no refit) when the node id set changes", () => {
+  const noop = vi.fn();
+  const graphA: BookGraph = {
+    nodes: [{ id: "c1", bookId: "b1", gender: "male", firstName: "A", lastName: "X" }],
+    edges: [],
+  };
+  const { rerender } = render(<MindMap graph={graphA} onNodeTap={noop} onNodeMoved={noop} />);
+
+  const cy0 = instances[0];
+  // Simulate the user having zoomed/panned to a spot before editing.
+  cy0.zoom(2);
+  cy0.pan({ x: 10, y: 20 });
+
+  // Spy only now, so the first-mount fit isn't counted.
+  const proto = Object.getPrototypeOf(cy0);
+  const fitSpy = vi.spyOn(proto, "fit");
+  const viewportSpy = vi.spyOn(proto, "viewport");
+
+  // Add a second node → node id set changes → MindMap re-inits cytoscape.
+  const graphB: BookGraph = {
+    nodes: [
+      ...graphA.nodes,
+      { id: "c2", bookId: "b1", gender: "female", firstName: "B", lastName: "Y" },
+    ],
+    edges: [],
+  };
+  rerender(<MindMap graph={graphB} onNodeTap={noop} onNodeMoved={noop} />);
+
+  // The re-init must restore the captured viewport and must NOT re-fit.
+  expect(viewportSpy).toHaveBeenCalledWith({ zoom: 2, pan: { x: 10, y: 20 } });
+  expect(fitSpy).not.toHaveBeenCalled();
+});
