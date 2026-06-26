@@ -149,9 +149,10 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
     let rafId = 0;
     let fitTimer = 0;
     if (isReinit && viewportRef.current) {
+      const vp = viewportRef.current;
       // Re-init from a node/edge add or remove: restore the snapshot taken on
       // teardown and skip auto-fit, so the user stays at the same pan/zoom.
-      cy.viewport({ zoom: viewportRef.current.zoom, pan: viewportRef.current.pan });
+      cy.viewport({ zoom: vp.zoom, pan: vp.pan });
       // Pin existing characters to their last live positions so cola doesn't
       // snap them back to stale stored coords and re-spread the graph; seed any
       // brand-new node beside a connected neighbour so cola only nudges it.
@@ -172,25 +173,48 @@ export function MindMap({ graph, onNodeTap, onNodeMoved, onEdgeTap, avatarUrl }:
           });
         });
       }
+      // WebKit/Safari can re-center a freshly created canvas on the next frame
+      // (once it measures the container), clobbering the synchronous restore
+      // above — Chrome measures synchronously and doesn't. Re-assert the viewport
+      // once after that frame so the restore sticks across browsers.
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        if (!cy.destroyed()) cy.viewport({ zoom: vp.zoom, pan: vp.pan });
+      });
     } else {
       // First mount of this book: frame the whole graph. cola has no settle
       // event, so keep re-framing while it spreads the nodes out, then release
       // the viewport on the user's first gesture (or after a short cap).
       let autoFit = true;
+      let fitting = false; // true only while our own cy.fit() runs (see onViewport)
       const fitNow = () => {
         rafId = 0;
-        if (autoFit && !cy.destroyed()) cy.fit(undefined, FIT_PADDING);
+        if (autoFit && !cy.destroyed()) {
+          fitting = true;
+          cy.fit(undefined, FIT_PADDING);
+          fitting = false;
+        }
       };
       const queueFit = () => {
         if (autoFit && !rafId) rafId = requestAnimationFrame(fitNow);
       };
       const stopAutoFit = () => {
         autoFit = false;
-        if (!cy.destroyed()) cy.off("position", "node", queueFit);
+        if (!cy.destroyed()) {
+          cy.off("position", "node", queueFit);
+          cy.off("viewport", onViewport);
+        }
+      };
+      // Hand the viewport over on the FIRST user-driven pan/zoom. Listening for
+      // the generic `viewport` event (and ignoring the ones our own fit fires)
+      // is browser-agnostic; the specific gesture events (scrollzoom/pinchzoom/
+      // tapstart) don't all fire under WebKit, so auto-fit never released there
+      // and kept clobbering the user's zoom.
+      const onViewport = () => {
+        if (!fitting) stopAutoFit();
       };
       cy.on("position", "node", queueFit); // re-frame as the layout spreads nodes
-      cy.on("scrollzoom pinchzoom", stopAutoFit); // user zoom → hand over the viewport
-      cy.one("tapstart", stopAutoFit); // user pan / drag / tap → hand over
+      cy.on("viewport", onViewport); // user pan/zoom → hand over the viewport
       fitTimer = window.setTimeout(stopAutoFit, FIT_SETTLE_MS);
       fitNow(); // initial frame (synchronous; refits follow as the layout spreads)
     }
