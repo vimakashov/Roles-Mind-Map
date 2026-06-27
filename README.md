@@ -14,6 +14,23 @@ docker compose up --build
 
 Data persists in the `rmm-data` volume.
 
+## User management
+
+Self-registration is disabled — accounts are managed by an admin running these
+scripts on the server, against the running `app` container (they `docker compose
+exec` into it, so bring the stack up first). Nicknames are case-insensitive.
+
+```bash
+# Create a new user
+username=<username> password=<password> ./register_new.sh
+
+# Change an existing user's password
+username=<username> password=<password> ./change_pwd.sh
+```
+
+`change_pwd.sh` finds the existing user and replaces their password; if no such
+user exists it prints `Пользователя с указанным username не существует`.
+
 ## Develop
 
 ```bash
