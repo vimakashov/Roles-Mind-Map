@@ -1,12 +1,19 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { hashPassword } from "../auth.js";
-import { registerSchema } from "../schemas.js";
+import { passwordSchema, registerSchema } from "../schemas.js";
 
 export class NicknameTakenError extends Error {
   constructor() {
     super("nickname taken");
     this.name = "NicknameTakenError";
+  }
+}
+
+export class UserNotFoundError extends Error {
+  constructor() {
+    super("user not found");
+    this.name = "UserNotFoundError";
   }
 }
 
@@ -24,6 +31,18 @@ export async function createUser(nickname: string, password: string): Promise<{ 
   if (await findByNameCI(n)) throw new NicknameTakenError();
   return prisma.user.create({
     data: { name: n, passwordHash: hashPassword(p) },
+    select: { id: true, name: true },
+  });
+}
+
+/** Change an existing user's password. CI nickname lookup; validates the new password only. */
+export async function setPassword(nickname: string, password: string): Promise<{ id: string; name: string }> {
+  const p = passwordSchema.parse(password);
+  const user = await findByNameCI(nickname);
+  if (!user) throw new UserNotFoundError();
+  return prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash: hashPassword(p) },
     select: { id: true, name: true },
   });
 }
